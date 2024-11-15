@@ -22,11 +22,6 @@ jobs:
       url: https://test.pypi.org/p/pysdccc
 
     steps:
-
-      - name: Exit if not on main branch
-        if: endsWith(github.ref, 'main') == false
-        run: exit -1
-
       - name: Download Artifact
         uses: actions/download-artifact@v4
         with:
