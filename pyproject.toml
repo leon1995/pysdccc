@@ -14,10 +14,21 @@ dependencies = [
     'junitparser>=3.1.2',
     'toml',
 ]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+readme = "README.md"
+license = {file = "LICENSE"}
+keywords = ["sdc", "sdccc", "test", "wrapper"]
 
 [project.urls]
 "Homepage" = "https://github.com/Draegerwerk/pysdccc"
 "Bug Tracker" = "https://github.com/Draegerwerk/pysdccc/issues"
+"Changelog" = "https://github.com/Draegerwerk/pysdccc/blob/main/CHANGELOG.md"
+"Repository" = "https://github.com/Draegerwerk/pysdccc.git"
 
 [project.optional-dependencies]
 dev = [
@@ -32,6 +43,9 @@ dev = [
 [tool.hatch.build.targets.sdist]
 include = [
     "src/pysdccc/**/*",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
     "pyproject.toml",
 ]
 support-legacy = false
