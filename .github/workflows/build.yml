@@ -1,0 +1,133 @@
+on:
+  workflow_call:
+  pull_request:
+    types: [ opened, synchronize, reopened, ready_for_review ]
+  push:
+    branches:
+      - main
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install ".[dev]"
+
+      - uses: astral-sh/ruff-action@v1
+        with:
+          args: "check"
+      - uses: astral-sh/ruff-action@v1
+        with:
+          args: "format --check"
+      - uses: jakebailey/pyright-action@v2
+
+  build:
+    needs: lint
+    name: Build
+    runs-on: ubuntu-latest
+    outputs:
+      WHL: ${{ steps.filenames.outputs.WHL }}
+      TARGZ: ${{ steps.filenames.outputs.TARGZ }}
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Setup hatch
+        run: python -m pip install hatch
+
+      - name: Set new version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          python -m hatch version ${GITHUB_REF/refs\/tags\/v/}
+      - name: Build package
+        run: python -m hatch build
+
+      - name: Set filenames in output
+        id: filenames
+        run: |
+          echo WHL=$(echo dist/*.whl) >> $GITHUB_OUTPUT
+          echo TARGZ=$(echo dist/*.tar.gz) >> $GITHUB_OUTPUT
+      - name: Archive package
+        uses: actions/upload-artifact@v4
+        with:
+          name: distributions
+          path: dist
+          retention-days: 5
+
+  tests:
+    needs: build
+    name: Tests
+
+    strategy:
+      matrix:
+        python-version: [ "3.11", "3.12", "3.13"]
+        os: [ ubuntu-latest, windows-latest ]
+        distribution: [ "${{ needs.build.outputs.WHL }}",
+                        "${{ needs.build.outputs.TARGZ }}" ]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: distributions
+          path: dist
+
+      - name: Install package and test dependencies
+        run: pip install ${{ matrix.distribution }}[dev]
+
+      - name: Detect suffix on ubuntu
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          echo SUFFIX=$(python -c "import pathlib;p=pathlib.Path('${{ matrix.distribution }}');print('whl') if p.suffix=='.whl' else print('tar_gz')") >> $GITHUB_ENV
+
+      - name: Detect suffix on windows
+        if: ${{ matrix.os == 'windows-latest' }}
+        # https://github.com/actions/runner-images/issues/5251#issuecomment-1071030822
+        run: |
+          echo SUFFIX=$(python -c "import pathlib;p=pathlib.Path('${{ matrix.distribution }}');print('whl') if p.suffix=='.whl' else print('tar_gz')") | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Run pytest
+        run: >-
+          pytest
+          --html=pytest_reports/unittest_report_${{ matrix.os }}_py${{ matrix.python-version }}_${{ env.SUFFIX }}.html
+          --self-contained-html
+          --log-file pytest_${{ matrix.os }}_py${{ matrix.python-version }}_${{ env.SUFFIX }}.log
+
+      - name: Archive test result
+        uses: actions/upload-artifact@v4
+        if: success() || failure()  # upload artifacts also if test stage failed
+        with:
+          name: unittest_reports-${{ matrix.os }}-py${{ matrix.python-version }}-${{ env.SUFFIX }}
+          path: pytest_reports/unittest_report_${{ matrix.os }}_py${{ matrix.python-version }}_${{ env.SUFFIX }}.html
+          retention-days: 5
+
+      - name: Archive test log
+        uses: actions/upload-artifact@v4
+        if: success() || failure()  # upload artifacts also if test stage failed
+        with:
+          name: pytest_logs-${{ matrix.os }}-py${{ matrix.python-version }}-${{ env.SUFFIX }}
+          path: pytest_${{ matrix.os }}_py${{ matrix.python-version }}_${{ env.SUFFIX }}.log
+          retention-days: 5
