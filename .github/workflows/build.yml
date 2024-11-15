@@ -94,7 +94,7 @@ jobs:
           path: dist
 
       - name: Install package and test dependencies
-        run: pip install ${{ matrix.distribution }}[test]
+        run: pip install ${{ matrix.distribution }}[dev]
 
       - name: Detect suffix on ubuntu
         if: ${{ matrix.os == 'ubuntu-latest' }}
