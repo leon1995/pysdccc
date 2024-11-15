@@ -1,5 +1,3 @@
-name: Build package
-
 on:
   workflow_call:
   pull_request:
@@ -10,6 +8,7 @@ on:
 
 jobs:
   lint:
+    name: Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,6 +30,8 @@ jobs:
       - uses: jakebailey/pyright-action@v2
 
   build:
+    needs: lint
+    name: Build
     runs-on: ubuntu-latest
     outputs:
       WHL: ${{ steps.filenames.outputs.WHL }}
@@ -69,6 +70,7 @@ jobs:
 
   tests:
     needs: build
+    name: Tests
 
     strategy:
       matrix:
