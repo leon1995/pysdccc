@@ -20,6 +20,8 @@ jobs:
     environment:
       name: testpypi
       url: https://test.pypi.org/p/pysdccc
+    permissions:
+      id-token: write
 
     steps:
       - name: Download Artifact
