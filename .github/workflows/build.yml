@@ -30,7 +30,7 @@ jobs:
       - uses: astral-sh/ruff-action@v1
         with:
           args: "format --check"
-      - uses: jakebailey/pyright-action@v2
+      - run: uv run pyright
 
   build:
     needs: lint
