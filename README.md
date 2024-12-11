@@ -26,12 +26,12 @@ import pysdccc
 
 
 def main():
+    if not pysdccc.is_downloaded("my-specific-version"):
+        pysdccc.download("https://url/to/sdccc.zip")
+
     runner = pysdccc.SdcccRunner(
         pathlib.Path("/path/to/sdccc/result/directory"),
     )
-
-    if not runner.is_downloaded("my-specific-version"):
-        pysdccc.download("https://url/to/sdccc.zip")
 
     exit_code = runner.run(  # https://github.com/Draegerwerk/SDCcc/?tab=readme-ov-file#exit-codes
         pathlib.Path("/path/to/configuration/file.toml"),
@@ -55,12 +55,12 @@ import pysdccc
 
 
 async def main():
+    if not await pysdccc.is_downloaded_async("my-specific-version"):
+        await pysdccc.download_async("https://url/to/sdccc.zip")
+
     runner = pysdccc.SdcccRunnerAsync(
         pathlib.Path("/path/to/sdccc/result/directory"),
     )
-
-    if not await runner.is_downloaded("my-specific-version"):
-        pysdccc.download("https://url/to/sdccc.zip")
 
     exit_code = await runner.run(  # https://github.com/Draegerwerk/SDCcc/?tab=readme-ov-file#exit-codes
         pathlib.Path("/path/to/configuration/file.toml"),

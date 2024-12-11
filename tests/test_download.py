@@ -1,3 +1,5 @@
+"""Provides functions for downloading and verifying the presence of the SDCcc executable."""
+
 import io
 import pathlib
 import uuid
@@ -6,7 +8,14 @@ from unittest import mock
 import httpx
 import pytest
 
-from pysdccc._download import _download_to_stream, _download_to_stream_async, download, download_async
+from pysdccc._download import (
+    _download_to_stream,
+    _download_to_stream_async,
+    download,
+    download_async,
+    is_downloaded,
+    is_downloaded_async,
+)
 
 
 def test_download_to_stream():
@@ -69,3 +78,26 @@ async def test_download_async():
     ):
         mock_get_exe_path.return_value = exe_path
         assert (await download_async(url)) == exe_path
+
+
+def test_is_downloaded():
+    """Test that the download status is correctly determined."""
+    assert not is_downloaded(uuid.uuid4().hex)
+    with mock.patch("pysdccc._runner.SdcccRunner") as mock_runner:
+        version = uuid.uuid4().hex
+        mock_runner.return_value.get_version.return_value = version
+        assert is_downloaded(version)
+
+
+@pytest.mark.asyncio
+async def test_is_downloaded_async():
+    """Test that the download status is correctly determined."""
+    assert not (await is_downloaded_async(uuid.uuid4().hex))
+    with mock.patch("pysdccc._runner.SdcccRunnerAsync") as mock_runner:
+        version = uuid.uuid4().hex
+
+        async def _get_version():  # noqa: ANN202
+            return version
+
+        mock_runner.return_value.get_version = _get_version
+        assert await is_downloaded_async(version)

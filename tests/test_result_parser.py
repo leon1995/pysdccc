@@ -63,7 +63,7 @@ def test_test_suite_iter():
         assert isinstance(case, TestCase)
 
 
-@mock.patch("pysdccc.result_parser.junitparser.JUnitXml.fromfile")
+@mock.patch("pysdccc._result_parser.junitparser.JUnitXml.fromfile")
 def test_test_suite_from_file(mock_fromfile: mock.MagicMock):
     """Test that the from_file method of TestSuite returns a TestSuite instance."""
     mock_suite = JUnitTestSuite()

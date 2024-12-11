@@ -152,8 +152,11 @@ def _log_sdccc_stdout(pipe: io.TextIOWrapper) -> None:
     :param pipe: The stdout pipe of the SDCcc process.
     """
     with pipe:
-        for line in iter(pipe.readline, b""):  # b'\n'-separated lines
-            logger.info(line.rstrip())
+        try:
+            for line in iter(pipe.readline, b""):  # b'\n'-separated lines
+                logger.info(line.rstrip())
+        except ValueError:
+            pass  # pipe closed
 
 
 def _log_sdccc_stderr(pipe: io.TextIOWrapper) -> None:
@@ -164,8 +167,11 @@ def _log_sdccc_stderr(pipe: io.TextIOWrapper) -> None:
     :param pipe: The stderr pipe of the SDCcc process.
     """
     with pipe:
-        for line in iter(pipe.readline, b""):  # b'\n'-separated lines
-            logger.error(line.rstrip())
+        try:
+            for line in iter(pipe.readline, b""):  # b'\n'-separated lines
+                logger.error(line.rstrip())
+        except ValueError:
+            pass  # pipe closed
 
 
 def _run_sdccc(exe_path: pathlib.Path, args: str, timeout: float | None) -> int:
@@ -242,12 +248,14 @@ class _BaseRunner:
             self.exe = exe or _get_exe_path(DEFAULT_STORAGE_DIRECTORY).absolute()
         except FileNotFoundError as e:
             raise FileNotFoundError("Have you downloaded sdccc?") from e
-        if not self.exe.is_file():
-            raise ValueError("Path to executable must be a file")
         if not self.exe.is_absolute():
             raise ValueError("Path to executable must be absolute")
+        if not self.exe.is_file():
+            raise FileNotFoundError(f"No executable found under {self.exe}")
         if not test_run_dir.is_absolute():
             raise ValueError("Path to test run directory must be absolute")
+        if not test_run_dir.is_dir():
+            raise ValueError("Test run directory is not a directory")
         self.test_run_dir = test_run_dir
 
     def get_config(self) -> dict[str, typing.Any]:
@@ -348,18 +356,6 @@ class SdcccRunner(_BaseRunner):
         except subprocess.CalledProcessError:  # e.g. if a non-zero exit code is returned
             return None
 
-    def is_downloaded(self, version: str) -> bool:
-        """Check if the SDCcc version is already downloaded.
-
-        This function checks if the SDCcc executable is already downloaded.
-
-        :return: True if the executable is already downloaded, False otherwise.
-        """
-        try:
-            return self.get_version() == version
-        except FileNotFoundError:
-            return False
-
 
 class _SdcccSubprocessProtocol(asyncio.SubprocessProtocol):
     _STDOUT = 1
@@ -412,9 +408,7 @@ class SdcccRunnerAsync(_BaseRunner):
         logger.info('Executing "%s %s"', self.exe, args)
         loop = loop or asyncio.get_running_loop()
         with _cwd(self.exe.parent):
-            transport, protocol = await loop.subprocess_exec(
-                lambda: _SdcccSubprocessProtocol(), self.exe, args, stdin=None
-            )
+            transport, protocol = await loop.subprocess_exec(_SdcccSubprocessProtocol, self.exe, args, stdin=None)
         try:
             await asyncio.wait_for(protocol.closed_event.wait(), timeout=timeout)
         except TimeoutError:
@@ -433,15 +427,3 @@ class SdcccRunnerAsync(_BaseRunner):
             process = await asyncio.create_subprocess_exec(self.exe, "--version", stdout=asyncio.subprocess.PIPE)
         stdout, _ = await process.communicate()
         return stdout.decode("utf-8").strip() if stdout else None
-
-    async def is_downloaded(self, version: str) -> bool:
-        """Check if the SDCcc version is already downloaded.
-
-        This function checks if the SDCcc executable is already downloaded.
-
-        :return: True if the executable is already downloaded, False otherwise.
-        """
-        try:
-            return await self.get_version() == version
-        except FileNotFoundError:
-            return False

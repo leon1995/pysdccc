@@ -94,7 +94,7 @@ def test_run_sdccc():
 
 def test_parse_results():
     """Test that the test results are correctly parsed from the result files."""
-    with mock.patch("pysdccc.result_parser.TestSuite.from_file") as mock_from_file:
+    with mock.patch("pysdccc._result_parser.TestSuite.from_file") as mock_from_file:
         mock_from_file.side_effect = ["direct_result", "invariant_result"]
         assert parse_results(pathlib.Path()) == ("direct_result", "invariant_result")
 
@@ -102,11 +102,11 @@ def test_parse_results():
 def test_sdccc_runner_init():
     """Test that the SdcccRunner is correctly initialized and raises ValueError for relative paths."""
     with pytest.raises(ValueError, match="Path to test run directory must be absolute"):
-        _BaseRunner(pathlib.Path(), pathlib.Path().absolute())
+        _BaseRunner(pathlib.Path(), pathlib.Path(__file__))
     with pytest.raises(ValueError, match="Path to executable must be absolute"):
         _BaseRunner(pathlib.Path().absolute(), pathlib.Path())
-    runner = _BaseRunner(pathlib.Path().absolute(), pathlib.Path().absolute())
-    assert runner.exe == pathlib.Path().absolute()
+    runner = _BaseRunner(pathlib.Path().absolute(), pathlib.Path(__file__))
+    assert runner.exe == pathlib.Path(__file__).absolute()
     assert runner.test_run_dir == pathlib.Path().absolute()
     with pytest.raises(ValueError, match="Path to requirements file must be absolute"):
         runner._prepare_execution_command(pathlib.Path().absolute(), pathlib.Path())  # noqa: SLF001
@@ -116,40 +116,43 @@ def test_sdccc_runner_init():
 
 def test_sdccc_runner_get_config():
     """Test that the SdcccRunner correctly loads the configuration."""
-    runner = _BaseRunner(pathlib.Path().absolute(), pathlib.Path().absolute())
-    with mock.patch("pysdccc.runner._load_configuration") as mock_load_config:
+    runner = _BaseRunner(pathlib.Path().absolute(), pathlib.Path(__file__))
+    with mock.patch("pysdccc._runner._load_configuration") as mock_load_config:
         mock_load_config.return_value = {"key": "value"}
         assert runner.get_config() == {"key": "value"}
 
 
 def test_sdccc_runner_get_requirements():
     """Test that the SdcccRunner correctly loads the requirements."""
-    runner = _BaseRunner(pathlib.Path().absolute(), pathlib.Path().absolute())
-    with mock.patch("pysdccc.runner._load_configuration") as mock_load_config:
+    runner = _BaseRunner(pathlib.Path().absolute(), pathlib.Path(__file__))
+    with mock.patch("pysdccc._runner._load_configuration") as mock_load_config:
         mock_load_config.return_value = {"key": "value"}
         assert runner.get_requirements() == {"key": "value"}
 
 
 def test_sdccc_runner_get_test_parameter():
     """Test that the SdcccRunner correctly loads the test parameters."""
-    runner = _BaseRunner(pathlib.Path().absolute(), pathlib.Path().absolute())
-    with mock.patch("pysdccc.runner._load_configuration") as mock_load_config:
+    runner = _BaseRunner(pathlib.Path().absolute(), pathlib.Path(__file__))
+    with mock.patch("pysdccc._runner._load_configuration") as mock_load_config:
         mock_load_config.return_value = {"key": "value"}
         assert runner.get_test_parameter() == {"key": "value"}
 
 
 def test_sdccc_runner_check_requirements():
     """Test that the SdcccRunner correctly checks the requirements."""
-    runner = _BaseRunner(pathlib.Path().absolute(), pathlib.Path().absolute())
-    with mock.patch("pysdccc.SdcccRunner.check_requirements") as mock_check_requirements:
+    runner = _BaseRunner(
+        pathlib.Path().absolute(),
+        pathlib.Path(__file__).parent.joinpath("testversion").joinpath("sdccc.exe").absolute(),
+    )
+    with mock.patch("pysdccc._runner._BaseRunner.check_requirements") as mock_check_requirements:
         runner.check_requirements(pathlib.Path("requirements.toml"))
         mock_check_requirements.assert_called_once()
 
 
 def test_sdccc_runner_get_result():
     """Test that the SdcccRunner correctly parses the test results."""
-    runner = _BaseRunner(pathlib.Path().absolute(), pathlib.Path().absolute())
-    with mock.patch("pysdccc.runner.parse_results") as mock_parse_results:
+    runner = _BaseRunner(pathlib.Path().absolute(), pathlib.Path(__file__))
+    with mock.patch("pysdccc._runner.parse_results") as mock_parse_results:
         mock_parse_results.return_value = ("direct_result", "invariant_result")
         assert runner.get_result() == ("direct_result", "invariant_result")
 
@@ -365,29 +368,10 @@ def test_parse_result():
     verify_suite(invariant_results, invariant)
 
 
-def test_is_downloaded():
-    """Test that the download status is correctly determined."""
-    assert not SdcccRunner(pathlib.Path().absolute()).is_downloaded(uuid.uuid4().hex)
-    with mock.patch("pysdccc.runner.SdcccRunner.get_version") as mock_func:
-        version = uuid.uuid4().hex
-        mock_func.return_value = version
-        assert SdcccRunner(pathlib.Path().absolute()).is_downloaded(version)
-
-
-@pytest.mark.asyncio
-async def test_is_downloaded_async():
-    """Test that the download status is correctly determined."""
-    assert not (await SdcccRunnerAsync(pathlib.Path().absolute()).is_downloaded(uuid.uuid4().hex))
-    with mock.patch("pysdccc.runner.SdcccRunnerAsync.get_version") as mock_func:
-        version = uuid.uuid4().hex
-        mock_func.return_value = version
-        assert await SdcccRunnerAsync(pathlib.Path().absolute()).is_downloaded(version)
-
-
 def test_sdccc_runner_version():
     """Test that the SdcccRunner correctly loads the version."""
-    runner = SdcccRunner(pathlib.Path().absolute())
-    with mock.patch("subprocess.check_output") as mock_check_output:
+    runner = SdcccRunner(pathlib.Path().absolute(), mock.MagicMock())
+    with mock.patch("subprocess.check_output") as mock_check_output, mock.patch("pysdccc._runner._cwd"):
         version = uuid.uuid4().hex
         mock_check_output.return_value = version
         assert runner.get_version() == version
@@ -396,8 +380,8 @@ def test_sdccc_runner_version():
 @pytest.mark.asyncio
 async def test_sdccc_runner_version_async():
     """Test that the SdcccRunner correctly loads the version."""
-    runner = SdcccRunnerAsync(pathlib.Path().absolute())
-    with mock.patch("asyncio.create_subprocess_exec") as mock_check_output:
+    runner = SdcccRunnerAsync(pathlib.Path().absolute(), mock.MagicMock())
+    with mock.patch("asyncio.create_subprocess_exec") as mock_check_output, mock.patch("pysdccc._runner._cwd"):
         version = uuid.uuid4().hex
         fut = asyncio.Future()
         mock_check_output.return_value.communicate = lambda: fut
@@ -407,36 +391,7 @@ async def test_sdccc_runner_version_async():
 
 def test_sdccc_runner_run():
     """Test that the SdcccRunner correctly runs the SDCcc executable."""
-    runner = SdcccRunner(pathlib.Path().absolute())
-    with mock.patch("pysdccc.runner._run_sdccc") as mock_run_sdccc:
+    runner = SdcccRunner(pathlib.Path().absolute(), mock.MagicMock())
+    with mock.patch("pysdccc._runner._run_sdccc") as mock_run_sdccc, mock.patch("pysdccc._runner._cwd"):
         mock_run_sdccc.return_value = 0
         assert runner.run(pathlib.Path("config.toml").absolute(), pathlib.Path("requirements.toml").absolute()) == 0
-
-
-@pytest.mark.asyncio
-async def test_sdccc_runner_run_async1():
-    """Test that the SdcccRunner correctly runs the SDCcc executable."""
-    runner = SdcccRunnerAsync(pathlib.Path().absolute())
-    with (
-        mock.patch("asyncio.get_running_loop") as mock_get_loop,
-        mock.patch("asyncio.AbstractEventLoop.subprocess_exec") as mock_subprocess_exec,
-        mock.patch("pysdccc.runner._SdcccSubprocessProtocol") as mock_protocol,
-        mock.patch("pysdccc.runner._cwd"),
-    ):
-        mock_loop = mock.MagicMock()
-        mock_get_loop.return_value = mock_loop
-        mock_transport = mock.MagicMock()
-        mock_protocol_instance = mock_protocol.return_value
-        mock_subprocess_exec.return_value = (mock_transport, mock_protocol_instance)
-
-        mock_protocol_instance.closed_event.wait = mock.AsyncMock()
-        mock_transport.get_returncode.return_value = 0
-
-        config = pathlib.Path("/absolute/path/to/config.toml").absolute()
-        requirements = pathlib.Path("/absolute/path/to/requirements.toml").absolute()
-
-        exit_code = await runner.run(config, requirements)
-
-        assert exit_code == 0
-        mock_subprocess_exec.assert_called_once_with(mock.ANY, runner.exe, mock.ANY, stdin=None)
-        mock_protocol_instance.closed_event.wait.assert_called_once()

@@ -115,6 +115,7 @@ def version():
         click.echo(version_)
     else:
         import sys
+
         click.echo("Unable to detect version of SDCcc executable.", err=True)
         sys.exit(1)
 

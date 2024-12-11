@@ -47,6 +47,19 @@ def download(
     return _runner._get_exe_path(output)  # noqa: SLF001
 
 
+def is_downloaded(version: str) -> bool:
+    """Check if the SDCcc version is already downloaded.
+
+    This function checks if the SDCcc executable is already downloaded.
+
+    :return: True if the executable is already downloaded, False otherwise.
+    """
+    try:
+        return _runner.SdcccRunner(pathlib.Path().absolute()).get_version() == version
+    except FileNotFoundError:
+        return False
+
+
 async def _download_to_stream_async(
     url: httpx.URL,
     stream: io.IOBase,
@@ -75,3 +88,16 @@ async def download_async(
     with zipfile.ZipFile(temporary_file.name) as f:
         f.extractall(output)
     return _runner._get_exe_path(output)  # noqa: SLF001
+
+
+async def is_downloaded_async(version: str) -> bool:
+    """Check if the SDCcc version is already downloaded.
+
+    This function checks if the SDCcc executable is already downloaded.
+
+    :return: True if the executable is already downloaded, False otherwise.
+    """
+    try:
+        return await _runner.SdcccRunnerAsync(pathlib.Path().absolute()).get_version() == version
+    except FileNotFoundError:
+        return False
