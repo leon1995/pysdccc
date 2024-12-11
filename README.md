@@ -13,7 +13,7 @@ Download from pypi using `pip install pysdccc`
 For this open source project the [Contributor License Agreement](Contributor_License_Agreement.md) governs all relevant activities and your contributions. By contributing to the project you agree to be bound by this Agreement and to licence your work accordingly.
 
 1. clone the repository
-2. `pip install -e .[dev]`
+2. [`uv sync --dev --all-extras`](https://docs.astral.sh/uv/reference/cli/#uv-sync)
 
 ## Usage
 
@@ -21,38 +21,58 @@ For this open source project the [Contributor License Agreement](Contributor_Lic
 
 ```python
 import pathlib
+
 import pysdccc
 
-runner = pysdccc.SdcccRunner(
-    pathlib.Path('/path/to/sdccc/executable'),
-    pathlib.Path('/path/to/sdccc/result/directory'),
-)
 
-exit_code = runner.run(
-    pathlib.Path('/path/to/configuration/file.toml'),
-    pathlib.Path('/path/to/requirements/file.toml'),
-)
+def main():
+    runner = pysdccc.SdcccRunner(
+        pathlib.Path("/path/to/sdccc/result/directory"),
+    )
 
-if exit_code > 1:  # https://github.com/Draegerwerk/SDCcc/?tab=readme-ov-file#exit-codes
-    raise Exception("Test run execution was not successful")
+    if not runner.is_downloaded("my-specific-version"):
+        pysdccc.download("https://url/to/sdccc.zip")
 
-direct_result, invariant_results = runner.get_result()
-for test_case in direct_result + invariant_results:
-    # add handling if test_case passed or failed...
-    print(f'{test_case.name}: {test_case.is_passed}')
+    exit_code = runner.run(  # https://github.com/Draegerwerk/SDCcc/?tab=readme-ov-file#exit-codes
+        pathlib.Path("/path/to/configuration/file.toml"),
+        pathlib.Path("/path/to/requirements/file.toml"),
+    )
+
+    try:
+        direct_result, invariant_results = runner.get_result()
+    except FileNotFoundError:
+        print("No results available")
+    else:
+        for test_case in direct_result + invariant_results:
+            # add handling if test_case passed or failed...
+            print(f"{test_case.name}: {test_case.is_passed}")
+```
+If you look for an async version
+```python
+import pathlib
+
+import pysdccc
+
+
+async def main():
+    runner = pysdccc.SdcccRunnerAsync(
+        pathlib.Path("/path/to/sdccc/result/directory"),
+    )
+
+    if not await runner.is_downloaded("my-specific-version"):
+        pysdccc.download("https://url/to/sdccc.zip")
+
+    exit_code = await runner.run(  # https://github.com/Draegerwerk/SDCcc/?tab=readme-ov-file#exit-codes
+        pathlib.Path("/path/to/configuration/file.toml"),
+        pathlib.Path("/path/to/requirements/file.toml"),
+    )
+    
+    # continue ...
 ```
 
 ### Download an sdccc executable
 
-```python
-import pysdccc
-import urllib.parse
-
-url = urllib.parse.urlparse('https://url/to/sdccc.zip')
-# only download if the local directory does not exist
-if not pysdccc.local_path_from_url(url).exists():
-    pysdccc.download(url)
-```
+Check out `pysdccc.download` or `pysdccc.download_async`. Otherwise, if `pysdccc[cli]` is installed, `$ pysdccc download https://url/to/sdccc.zip` can also be used.
 
 ### Create configuration file
 
@@ -72,7 +92,6 @@ config_path = pathlib.Path('/path/to/configuration/file.toml')
 config_path.write_text(toml.dumps(config))
 
 runner = pysdccc.SdcccRunner(
-    pathlib.Path('/path/to/sdccc/executable'),
     pathlib.Path('/path/to/sdccc/result/directory'),
 )
 
@@ -105,7 +124,6 @@ requirements_path = pathlib.Path('/path/to/configuration/file.toml')
 requirements_path.write_text(toml.dumps(requirements))
 
 runner = pysdccc.SdcccRunner(
-    pathlib.Path('/path/to/sdccc/executable'),
     pathlib.Path('/path/to/sdccc/result/directory'),
 )
 # optionally, check whether you did not add a requirement that is not available
@@ -139,7 +157,6 @@ requirements_path = pathlib.Path('/path/to/configuration/file.toml')
 requirements_path.write_text(toml.dumps(config))
 
 runner = pysdccc.SdcccRunner(
-    pathlib.Path('/path/to/sdccc/executable'),
     pathlib.Path('/path/to/sdccc/result/directory'),
 )
 runner.run(
@@ -158,6 +175,7 @@ requirements['TestParameter']['Biceps547TimeInterval'] = 10
 
 A logger is available to log the output of the test suite `logging.getLogger('pysdccc')`.
 Please note that each line of the test suite output is logged as a separate log message.
+Stdout is logged as info and stderr as error.
 
 ## Notices
 

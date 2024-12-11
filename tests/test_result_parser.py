@@ -9,7 +9,7 @@ from junitparser import JUnitXml, junitparser  # pyright: ignore [reportPrivateI
 from junitparser import TestCase as JUnitTestCase  # pyright: ignore [reportPrivateImportUsage]
 from junitparser import TestSuite as JUnitTestSuite  # pyright: ignore [reportPrivateImportUsage]
 
-from pysdccc.result_parser import TestCase, TestDescriptionElement, TestIdentifierElement, TestSuite
+from pysdccc._result_parser import TestCase, TestDescriptionElement, TestIdentifierElement, TestSuite
 
 
 def test_test_identifier_element_text():

@@ -83,20 +83,22 @@ class TestCase(junitparser.TestCase):
     """
 
     @property
-    def test_identifier(self) -> str:
+    def test_identifier(self) -> str | None:
         """Links a test case with a unique test identifier.
 
         :return: The unique identifier for the test case.
         """
-        return self.child(TestIdentifierElement).text  # type: ignore[no-any-return,no-untyped-call]
+        elem = self.child(TestIdentifierElement)
+        return elem.text if elem is not None else None
 
     @property
-    def test_description(self) -> str:
+    def test_description(self) -> str | None:
         """Description of the test case itself, i.e. what is tested and how.
 
         :return: The description of the test case.
         """
-        return self.child(TestDescriptionElement).text  # type: ignore[no-any-return,no-untyped-call]
+        elem = self.child(TestDescriptionElement)
+        return elem.text if elem is not None else None
 
 
 class TestSuite(junitparser.TestSuite):
@@ -119,6 +121,7 @@ class TestSuite(junitparser.TestSuite):
         :param file: The path to the test suite file to be parsed. Can be a `pathlib.Path` object or a string.
         :return: A `TestSuite` object containing the parsed test cases with custom elements.
         :raises ValueError: If the parsed file does not contain a `TestSuite` object.
+        :raises FileNotFoundError: If the file does not exist.
         """
         suite = junitparser.JUnitXml.fromfile(str(file))
         if not isinstance(suite, junitparser.TestSuite):

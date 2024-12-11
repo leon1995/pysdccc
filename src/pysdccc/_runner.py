@@ -55,56 +55,26 @@ Usage
     direct_results, invariant_results = runner.get_result()
 """
 
+import asyncio
 import contextlib
-import http.client
 import io
 import logging
 import os
 import pathlib
-import ssl
 import subprocess
-import tempfile
 import threading
 import typing
-import urllib.parse
-import zipfile
 
 import toml
 
-from pysdccc.result_parser import TestSuite
+from pysdccc._result_parser import TestSuite
 
 DIRECT_TEST_RESULT_FILE_NAME = "TEST-SDCcc_direct.xml"
 INVARIANT_TEST_RESULT_FILE_NAME = "TEST-SDCcc_invariant.xml"
-MAX_REDIRECT_COUNT = 4
-"""Maximum number of redirects to follow before aborting the download."""
-DEFAULT_STORAGE_DIRECTORY = pathlib.Path(tempfile.gettempdir()).joinpath("sdccc")
+DEFAULT_STORAGE_DIRECTORY = pathlib.Path(__file__).parent.joinpath("_sdccc")
 """Default directory to store the downloaded sdccc versions."""
 
 logger = logging.getLogger("pysdccc")
-
-
-def _get_version_from_url(url: urllib.parse.ParseResult) -> str:
-    """Extract the version string from the given URL.
-
-    This function takes a parsed URL and extracts the version string from the path component of the URL.
-    The version string is assumed to be the stem (i.e., the filename without the extension) of the last part of the path.
-
-    :param url: The parsed URL from which to extract the version string.
-    :return: The extracted version string.
-    """
-    return pathlib.Path(url.path).stem
-
-
-def _get_local_path(version: str) -> pathlib.Path:
-    """Get the local path for the specified version.
-
-    This function constructs the local path where the specified version of the SDCcc executable is stored.
-    The path is constructed by joining the default storage directory with the version string.
-
-    :param version: The version string for which the local path is to be constructed.
-    :return: The constructed local path as a `pathlib.Path` object.
-    """
-    return DEFAULT_STORAGE_DIRECTORY.joinpath(version)
 
 
 def _get_exe_path(local_path: pathlib.Path) -> pathlib.Path:
@@ -118,9 +88,9 @@ def _get_exe_path(local_path: pathlib.Path) -> pathlib.Path:
     :return: The path to the SDCcc executable file.
     :raises FileNotFoundError: If no executable file or more than one executable file is found in the specified path.
     """
-    files = [f for f in local_path.glob("sdccc-*.exe") if f.is_file()]
+    files = [f for f in local_path.glob("*.exe") if f.is_file()]
     if not len(files) == 1:
-        raise FileNotFoundError(f"Expected one exe file, got {len(files)} in path {local_path}")
+        raise FileNotFoundError(f"Unable to determine correct executable file, got {files} in path {local_path}")
     return files[0]
 
 
@@ -147,95 +117,6 @@ def _cwd(path: str | pathlib.Path) -> typing.Generator[None, None, None]:
         yield
     finally:
         os.chdir(origin)
-
-
-def _download_version_to_stream(
-    url: urllib.parse.ParseResult,
-    stream: io.IOBase,
-    proxy: tuple[str, int] | None = None,
-    timeout: int = 60,
-    redirect_counter: int = 0,
-) -> None:
-    """Download the SDCcc executable from the specified URL to the provided stream.
-
-    This function handles the download of the SDCcc executable from a given URL, optionally using a proxy and with a specified timeout.
-    It follows redirects up to a maximum defined by `MAX_REDIRECT_COUNT`.
-
-    :param url: The parsed URL from which to download the executable.
-    :param stream: The stream where the downloaded executable will be written.
-    :param proxy: Optional proxy to be used for the download, specified as a tuple (host, port).
-    :param timeout: The timeout in seconds for the download operation.
-    :param redirect_counter: The current count of redirects followed. Used internally to limit the number of redirects.
-    :raises http.client.HTTPException: If an HTTP error occurs or the maximum number of redirects is exceeded.
-    """
-    context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-    context.check_hostname = True
-    context.load_default_certs()
-    if proxy:
-        connection = http.client.HTTPSConnection(proxy[0], proxy[1], context=context, timeout=timeout)
-        connection.set_tunnel(url.netloc, url.port)
-    else:
-        connection = http.client.HTTPSConnection(url.netloc, url.port, context=context, timeout=timeout)
-    request_url = f"{url.path}?{url.query}"
-    try:
-        connection.request("GET", request_url)
-        response = connection.getresponse()
-        if 400 <= (code := response.getcode()) < 600:  # noqa: PLR2004
-            raise http.client.HTTPException(f'Got unexpected status code "{code} for url {url}')
-        if 300 <= code < 400:  # noqa: PLR2004
-            # follow the redirect
-            if redirect_counter > MAX_REDIRECT_COUNT:
-                raise http.client.HTTPException(f"Redirection count exceeded maximum of {MAX_REDIRECT_COUNT}")
-            _download_version_to_stream(
-                urllib.parse.urlparse(response.getheader("Location")),  # type: ignore[arg-type]
-                stream,
-                proxy=proxy,
-                timeout=timeout,
-                redirect_counter=redirect_counter + 1,
-            )
-            return
-        content_length = int(response.headers.get("Content-Length", 0)) / 1024 / 1024  # content length in MB
-        i = 0.0
-        while chunk := response.read(2 ** (8 + 16)):  # 16 MiB steps
-            stream.write(chunk)
-            i += len(chunk) / 1024 / 1024
-            logger.debug(f"Downloaded {i:.2f}/{content_length:.2f} MB.")  # noqa: G004
-
-    finally:
-        connection.close()
-
-
-def local_path_from_url(url: urllib.parse.ParseResult) -> pathlib.Path:
-    """Get the local path where the version from the URL is stored.
-
-    This function constructs the local path for the version specified in the URL. It extracts the version string from the URL
-    and uses it to determine the local storage path.
-
-    :param url: The parsed URL from which to extract the version string.
-    :return: The local path where the version is stored.
-    """
-    return _get_local_path(_get_version_from_url(url))
-
-
-def download(url: urllib.parse.ParseResult, proxy: tuple[str, int] | None = None, timeout: int = 60) -> pathlib.Path:
-    """Download the specified version from the default URL to a temporary directory.
-
-    This function downloads the SDCcc executable from the given URL to a temporary directory. It optionally uses a proxy and a specified timeout for the download operation. The downloaded file is extracted to a local path determined by the version string in the URL.
-
-    :param url: The parsed URL from which to download the executable.
-    :param proxy: Optional proxy to be used for the download, specified as a tuple (host, port).
-    :param timeout: The timeout in seconds for the download operation.
-    :return: The path to the downloaded executable.
-    :raises http.client.HTTPException: If an HTTP error occurs or the maximum number of redirects is exceeded.
-    """
-    logger.info("Downloading sdccc from %s.", url.geturl())
-    with tempfile.NamedTemporaryFile("wb", suffix=".zip", delete=False) as temporary_file:
-        _download_version_to_stream(url, temporary_file, proxy=proxy, timeout=timeout)  # type: ignore[arg-type]
-    extraction_path = local_path_from_url(url)
-    logger.info("Extracting sdccc to %s.", extraction_path)
-    with zipfile.ZipFile(temporary_file.name) as f:
-        f.extractall(extraction_path)
-    return _get_exe_path(extraction_path)
 
 
 def check_requirements(provided: dict[str, dict[str, bool]], available: dict[str, dict[str, bool]]) -> None:
@@ -287,7 +168,7 @@ def _log_sdccc_stderr(pipe: io.TextIOWrapper) -> None:
             logger.error(line.rstrip())
 
 
-def _run_sdccc(exe_path: pathlib.Path, timeout: float | None, **kwargs: typing.Any) -> int:
+def _run_sdccc(exe_path: pathlib.Path, args: str, timeout: float | None) -> int:
     """Run the SDCcc executable using the specified configurations.
 
     This function executes the SDCcc executable with the provided command line arguments and configurations.
@@ -295,11 +176,9 @@ def _run_sdccc(exe_path: pathlib.Path, timeout: float | None, **kwargs: typing.A
 
     :param exe_path: The path to the SDCcc executable.
     :param timeout: The timeout in seconds for the SDCcc process. If None, wait indefinitely.
-    :param kwargs: Additional command line arguments to be passed to the SDCcc executable.
+    :param args: Arguments formatted as a string.
     :return: The exit code of the SDCcc process.
     """
-    kwargs["no_subdirectories"] = "true"
-    args = " ".join(f"--{arg} {value}" for arg, value in kwargs.items())
     logger.info('Executing "%s %s"', exe_path, args)
     with (
         _cwd(exe_path.parent),
@@ -345,25 +224,30 @@ def parse_results(test_artifacts_directory: pathlib.Path) -> tuple[TestSuite, Te
     )
 
 
-class SdcccRunner:
+class _BaseRunner:
     """Runner for the SDCcc tests.
 
     This class provides methods to manage and execute the SDCcc tests. It handles the configuration, requirements,
     and execution of the SDCcc executable, as well as parsing the test results.
     """
 
-    def __init__(self, exe: pathlib.Path, test_run_dir: pathlib.Path):
+    def __init__(self, test_run_dir: pathlib.Path, exe: pathlib.Path | None = None):
         """Initialize the SdcccRunner object.
 
         :param exe: The path to the SDCcc executable. Must be an absolute path.
         :param test_run_dir: The path to the directory where the test run results are to be stored. Must be an absolute path.
         :raises ValueError: If the provided paths are not absolute.
         """
-        if not exe.is_absolute():
+        try:
+            self.exe = exe or _get_exe_path(DEFAULT_STORAGE_DIRECTORY).absolute()
+        except FileNotFoundError as e:
+            raise FileNotFoundError("Have you downloaded sdccc?") from e
+        if not self.exe.is_file():
+            raise ValueError("Path to executable must be a file")
+        if not self.exe.is_absolute():
             raise ValueError("Path to executable must be absolute")
         if not test_run_dir.is_absolute():
             raise ValueError("Path to test run directory must be absolute")
-        self.exe = exe
         self.test_run_dir = test_run_dir
 
     def get_config(self) -> dict[str, typing.Any]:
@@ -406,6 +290,32 @@ class SdcccRunner:
         user_provided_requirements = toml.load(path)
         check_requirements(user_provided_requirements, sdccc_provided_requirements)
 
+    def get_result(self) -> tuple[TestSuite, TestSuite]:
+        """Get the parsed results of the test run.
+
+        This method reads the direct and invariant test result files from the test run directory and returns them
+        as TestSuite objects.
+
+        :return: A tuple containing the parsed direct and invariant test results as TestSuite objects.
+        """
+        return parse_results(self.test_run_dir)
+
+    def _prepare_execution_command(self, config: pathlib.Path, requirements: pathlib.Path, **kwargs: typing.Any) -> str:
+        if not config.is_absolute():
+            raise ValueError("Path to config file must be absolute")
+        if not requirements.is_absolute():
+            raise ValueError("Path to requirements file must be absolute")
+
+        kwargs["no_subdirectories"] = "true"
+        kwargs["test_run_directory"] = self.test_run_dir
+        kwargs["config"] = config
+        kwargs["testconfig"] = requirements
+        return " ".join(f"--{arg} {value}" for arg, value in kwargs.items())
+
+
+class SdcccRunner(_BaseRunner):
+    """Synchronous runner for sdccc."""
+
     def run(
         self,
         config: pathlib.Path,
@@ -427,25 +337,111 @@ class SdcccRunner:
         :return: The exit code of the SDCcc process.
         :raises ValueError: If the provided paths are not absolute.
         """
-        if not config.is_absolute():
-            raise ValueError("Path to config file must be absolute")
-        if not requirements.is_absolute():
-            raise ValueError("Path to requirements file must be absolute")
-        return _run_sdccc(
-            self.exe,
-            timeout,
-            config=config,
-            testconfig=requirements,
-            test_run_directory=self.test_run_dir,
-            **kwargs,
-        )
+        args = self._prepare_execution_command(config, requirements, **kwargs)
+        return _run_sdccc(self.exe, args=args, timeout=timeout)
 
-    def get_result(self) -> tuple[TestSuite, TestSuite]:
-        """Get the parsed results of the test run.
+    def get_version(self) -> str | None:
+        """Get the version of the SDCcc executable."""
+        try:
+            with _cwd(self.exe.parent):
+                return subprocess.check_output([self.exe, "--version"], text=True).strip()  # noqa: S603
+        except subprocess.CalledProcessError:  # e.g. if a non-zero exit code is returned
+            return None
 
-        This method reads the direct and invariant test result files from the test run directory and returns them
-        as TestSuite objects.
+    def is_downloaded(self, version: str) -> bool:
+        """Check if the SDCcc version is already downloaded.
 
-        :return: A tuple containing the parsed direct and invariant test results as TestSuite objects.
+        This function checks if the SDCcc executable is already downloaded.
+
+        :return: True if the executable is already downloaded, False otherwise.
         """
-        return parse_results(self.test_run_dir)
+        try:
+            return self.get_version() == version
+        except FileNotFoundError:
+            return False
+
+
+class _SdcccSubprocessProtocol(asyncio.SubprocessProtocol):
+    _STDOUT = 1
+    _STDERR = 2
+
+    def __init__(self):
+        self.closed_event = asyncio.Event()
+
+    def pipe_data_received(self, fd: int, data: bytes):
+        if fd == self._STDOUT:
+            logger.info(data.decode("utf-8").rstrip())
+        elif fd == self._STDERR:
+            logger.error(data.decode("utf-8").rstrip())
+        else:
+            raise RuntimeError(f"Unexpected file descriptor {fd}")
+
+    def connection_lost(self, exc: Exception | None):
+        self.closed_event.set()
+        if exc:
+            raise exc
+
+
+class SdcccRunnerAsync(_BaseRunner):
+    """Asynchronous runner for sdccc."""
+
+    async def run(
+        self,
+        config: pathlib.Path,
+        requirements: pathlib.Path,
+        timeout: float | None = None,
+        loop: asyncio.AbstractEventLoop | None = None,
+        **kwargs: typing.Any,
+    ) -> int:
+        """Run the SDCcc executable using the specified configuration and requirements.
+
+        This method executes the SDCcc executable with the provided configuration and requirements files,
+        and additional command line arguments. It logs the stdout and stderr of the process and waits for the
+        process to complete or timeout.
+        Checkout more parameter under https://github.com/draegerwerk/sdccc?tab=readme-ov-file#running-sdccc
+
+        :param config: The path to the configuration file. Must be an absolute path.
+        :param requirements: The path to the requirements file. Must be an absolute path.
+        :param timeout: The timeout in seconds for the SDCcc process. If None, wait indefinitely.
+        :param loop: The event loop to run the SDCcc process in. If None, the current running loop is used.
+        :param kwargs: Additional command line arguments to be passed to the SDCcc executable.
+        :return: The exit code of the SDCcc process.
+        :raises ValueError: If the provided paths are not absolute.
+        """
+        args = self._prepare_execution_command(config, requirements, **kwargs)
+        logger.info('Executing "%s %s"', self.exe, args)
+        loop = loop or asyncio.get_running_loop()
+        with _cwd(self.exe.parent):
+            transport, protocol = await loop.subprocess_exec(
+                lambda: _SdcccSubprocessProtocol(), self.exe, args, stdin=None
+            )
+        try:
+            await asyncio.wait_for(protocol.closed_event.wait(), timeout=timeout)
+        except TimeoutError:
+            transport.kill()
+        finally:
+            transport.close()
+        await protocol.closed_event.wait()
+        return_code = transport.get_returncode()
+        if return_code is None:
+            raise RuntimeError("Process did not exit")
+        return return_code
+
+    async def get_version(self) -> str | None:
+        """Get the version of the SDCcc executable."""
+        with _cwd(self.exe.parent):
+            process = await asyncio.create_subprocess_exec(self.exe, "--version", stdout=asyncio.subprocess.PIPE)
+        stdout, _ = await process.communicate()
+        return stdout.decode("utf-8").strip() if stdout else None
+
+    async def is_downloaded(self, version: str) -> bool:
+        """Check if the SDCcc version is already downloaded.
+
+        This function checks if the SDCcc executable is already downloaded.
+
+        :return: True if the executable is already downloaded, False otherwise.
+        """
+        try:
+            return await self.get_version() == version
+        except FileNotFoundError:
+            return False

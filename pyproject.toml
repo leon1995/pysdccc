@@ -11,8 +11,9 @@ authors = [
 description = "Python wrapper for sdccc test tool"
 requires-python = ">=3.11, <3.14"
 dependencies = [
-    'junitparser>=3.1.2',
-    'toml',
+    "junitparser>=3.1.2",
+    "toml",
+    "httpx",
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -30,14 +31,23 @@ keywords = ["sdc", "sdccc", "test", "wrapper"]
 "Changelog" = "https://github.com/Draegerwerk/pysdccc/blob/main/CHANGELOG.md"
 "Repository" = "https://github.com/Draegerwerk/pysdccc.git"
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "pytest",
     "pytest-html",
-    "ruff>=0.7.3",
+    "pytest-asyncio",
+    "ruff>=0.8.2",
     "pyright",
     "lxml-stubs",
     "types-toml",
+]
+
+[project.scripts]
+pysdccc = "pysdccc._cli:cli"
+
+[project.optional-dependencies]
+cli = [
+    "click>=2.0",
 ]
 
 [tool.hatch.build.targets.sdist]
@@ -95,8 +105,6 @@ lint.extend-select = [# https://docs.astral.sh/ruff/settings/#extend-select
     "YTT"  # https://docs.astral.sh/ruff/rules/#flake8-2020-ytt
 ]
 lint.extend-ignore = [# https://docs.astral.sh/ruff/settings/#extend-ignore
-    "ANN101", # https://docs.astral.sh/ruff/rules/missing-type-self/
-    "ANN102", # https://docs.astral.sh/ruff/rules/missing-type-cls/
     "ANN204", # https://docs.astral.sh/ruff/rules/missing-return-type-special-method/
     "ANN401", # https://docs.astral.sh/ruff/rules/any-type/
     "C408", # https://docs.astral.sh/ruff/rules/unnecessary-collection-call/
