@@ -243,6 +243,11 @@ dev = [
     { name = "ruff" },
     { name = "types-toml" },
 ]
+test = [
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-html" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -261,6 +266,11 @@ dev = [
     { name = "pytest-html" },
     { name = "ruff", specifier = ">=0.8.2" },
     { name = "types-toml" },
+]
+test = [
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-html" },
 ]
 
 [[package]]

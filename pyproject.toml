@@ -32,10 +32,13 @@ keywords = ["sdc", "sdccc", "test", "wrapper"]
 "Repository" = "https://github.com/Draegerwerk/pysdccc.git"
 
 [dependency-groups]
-dev = [
+test = [
     "pytest",
     "pytest-html",
     "pytest-asyncio",
+]
+dev = [
+    { include-group = "test" },
     "ruff>=0.8.2",
     "pyright",
     "lxml-stubs",

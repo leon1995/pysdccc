@@ -13,13 +13,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: "Set up Python"
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version-file: ".python-version"
 
       - name: Install dependencies
-        run: pip install ".[dev]"
+        run: uv sync --dev --all-extras
 
       - uses: astral-sh/ruff-action@v1
         with:
@@ -84,10 +87,11 @@ jobs:
       - name: Check out Git repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
 
       - name: Download Artifact
         uses: actions/download-artifact@v4
@@ -95,8 +99,11 @@ jobs:
           name: distributions
           path: dist
 
-      - name: Install package and test dependencies
-        run: pip install ${{ matrix.distribution }}[dev]
+      - name: Install package
+        run: uv pip install ${{ matrix.distribution }}
+
+      - name: Install test dependencies
+        run: uv sync --group test
 
       - name: Detect suffix on ubuntu
         if: ${{ matrix.os == 'ubuntu-latest' }}
@@ -111,7 +118,7 @@ jobs:
 
       - name: Run pytest
         run: >-
-          pytest
+          uv run pytest
           --html=pytest_reports/unittest_report_${{ matrix.os }}_py${{ matrix.python-version }}_${{ env.SUFFIX }}.html
           --self-contained-html
           --log-file pytest_${{ matrix.os }}_py${{ matrix.python-version }}_${{ env.SUFFIX }}.log
