@@ -1,6 +1,7 @@
 import io
 import logging
 import pathlib
+import subprocess
 import tempfile
 import zipfile
 
@@ -56,7 +57,7 @@ def is_downloaded(version: str) -> bool:
     """
     try:
         return _runner.SdcccRunner(pathlib.Path().absolute()).get_version() == version
-    except FileNotFoundError:
+    except (FileNotFoundError, subprocess.CalledProcessError):
         return False
 
 
@@ -99,5 +100,5 @@ async def is_downloaded_async(version: str) -> bool:
     """
     try:
         return await _runner.SdcccRunnerAsync(pathlib.Path().absolute()).get_version() == version
-    except FileNotFoundError:
+    except (FileNotFoundError, subprocess.CalledProcessError):
         return False

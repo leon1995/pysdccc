@@ -348,13 +348,12 @@ class SdcccRunner(_BaseRunner):
         args = self._prepare_execution_command(config, requirements, **kwargs)
         return _run_sdccc(self.exe, args=args, timeout=timeout)
 
-    def get_version(self) -> str | None:
+    def get_version(self) -> str:
         """Get the version of the SDCcc executable."""
-        try:
-            with _cwd(self.exe.parent):
-                return subprocess.check_output([self.exe, "--version"], text=True).strip()  # noqa: S603
-        except subprocess.CalledProcessError:  # e.g. if a non-zero exit code is returned
-            return None
+        with _cwd(self.exe.parent):
+            # use capture_output = True to get stdout and stderr instead of check_output which only collects stdout
+            process = subprocess.run([str(self.exe), "--version"], check=True, capture_output=True)  # noqa: S603
+        return process.stdout.decode().strip()
 
 
 class _SdcccSubprocessProtocol(asyncio.SubprocessProtocol):
@@ -424,6 +423,16 @@ class SdcccRunnerAsync(_BaseRunner):
     async def get_version(self) -> str | None:
         """Get the version of the SDCcc executable."""
         with _cwd(self.exe.parent):
-            process = await asyncio.create_subprocess_exec(self.exe, "--version", stdout=asyncio.subprocess.PIPE)
-        stdout, _ = await process.communicate()
+            process = await asyncio.create_subprocess_exec(
+                self.exe,
+                "--version",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+        stdout, stderr = await process.communicate()
+        if process.returncode:
+            error = subprocess.CalledProcessError(process.returncode, f"{self.exe} --version")
+            error.stdout = stdout
+            error.stderr = stderr
+            raise error
         return stdout.decode("utf-8").strip() if stdout else None

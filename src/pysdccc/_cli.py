@@ -1,5 +1,8 @@
 import io
+import locale
 import pathlib
+import subprocess
+import sys
 import tempfile
 import zipfile
 from typing import Any
@@ -10,8 +13,8 @@ from pysdccc import _runner
 
 try:
     import click
-except ImportError as e:
-    raise ImportError("Cli not installed. Please install using 'pip install pysdccc[cli].") from e
+except ImportError as import_error:
+    raise ImportError("Cli not installed. Please install using 'pip install pysdccc[cli].") from import_error
 
 
 class UrlType(click.ParamType):
@@ -38,6 +41,8 @@ class ProxyType(click.ParamType):
 
 
 PROXY = ProxyType()
+
+_ENCODING = "utf-8" if sys.flags.utf8_mode else locale.getencoding()
 
 
 def _download_to_stream(
@@ -73,12 +78,14 @@ def _download(
 
 
 @click.group()
-@click.version_option()
+@click.version_option(message="%(version)s")
 def cli():
     pass
 
 
-@click.command(help="Install the SDCcc executable from the specified URL.")
+@click.command(
+    short_help="Install the SDCcc executable from the specified URL. Releases can be found at https://github.com/Draegerwerk/SDCcc/releases.",
+)
 @click.argument("url", type=URL)
 @click.option("--proxy", help="Proxy server to use for the download.", type=PROXY)
 def install(url: httpx.URL, proxy: httpx.Proxy | None):
@@ -89,10 +96,13 @@ def install(url: httpx.URL, proxy: httpx.Proxy | None):
     :param url: The parsed URL from which to download the executable.
     :param proxy: Optional proxy to be used for the download.
     """
-    _download(url, _runner.DEFAULT_STORAGE_DIRECTORY, proxy)
+    try:
+        _download(url, _runner.DEFAULT_STORAGE_DIRECTORY, proxy)
+    except Exception as e:
+        raise click.ClickException(f"Failed to download and extract SDCcc from {url}: {e}.") from e
 
 
-@click.command(help="Uninstall the SDCcc executable by removing the specified directory.")
+@click.command(short_help="Uninstall the SDCcc executable by removing the specified directory.")
 def uninstall():
     """Uninstall the SDCcc executable.
 
@@ -107,17 +117,25 @@ def uninstall():
         click.echo("SDCcc is not installed. Nothing to uninstall.")
 
 
-@click.command()
+@click.command(short_help="Print the version of the SDCcc executable.")
 def version():
     """Print the version of the SDCcc executable."""
-    version_ = _runner.SdcccRunner(pathlib.Path().absolute()).get_version()
+    try:
+        version_ = _runner.SdcccRunner(pathlib.Path().absolute()).get_version()
+    except FileNotFoundError as e:
+        raise click.ClickException("SDCcc is not installed. Please install using 'pysdccc install <url>'.") from e
+    except subprocess.CalledProcessError as e:
+        if e.stdout:
+            stdout = e.stdout.decode(_ENCODING).strip()
+            click.echo(stdout)
+        if e.stderr:
+            stderr = e.stderr.decode(_ENCODING).strip()
+            click.echo(stderr, err=True)
+        raise SystemExit(e.returncode) from e
     if version_:
         click.echo(version_)
     else:
-        import sys
-
-        click.echo("Unable to detect version of SDCcc executable.", err=True)
-        sys.exit(1)
+        raise click.ClickException("Unable to detect version of SDCcc executable.")
 
 
 cli.add_command(install)
