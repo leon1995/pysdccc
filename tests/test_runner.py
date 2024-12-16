@@ -16,11 +16,11 @@ from pysdccc._runner import (
     SdcccRunner,
     SdcccRunnerAsync,
     _BaseRunner,
-    _cwd,
-    _get_exe_path,
     _load_configuration,
     _run_sdccc,
     check_requirements,
+    cwd,
+    get_exe_path,
     parse_results,
 )
 
@@ -30,10 +30,10 @@ def test_get_exe_path():
     assert not pathlib.Path("sdccc-1.0.0.exe").exists()
     with mock.patch.object(pathlib, "Path") as mock_path:
         mock_path.glob = lambda _: [pathlib.Path("sdccc-1.0.0.exe")]
-        assert _get_exe_path(mock_path) == pathlib.Path("sdccc-1.0.0.exe")
+        assert get_exe_path(mock_path) == pathlib.Path("sdccc-1.0.0.exe")
 
     with pytest.raises(FileNotFoundError):
-        _get_exe_path(pathlib.Path("sdccc-1.0.0.exe"))
+        get_exe_path(pathlib.Path("sdccc-1.0.0.exe"))
 
 
 def test_load_configuration():
@@ -47,7 +47,7 @@ def test_cwd():
     """Test that the current working directory is correctly changed and restored."""
     original_cwd = pathlib.Path.cwd()
     temp_dir = pathlib.Path(tempfile.gettempdir())
-    with _cwd(temp_dir):
+    with cwd(temp_dir):
         assert pathlib.Path.cwd() == temp_dir
     assert pathlib.Path.cwd() == original_cwd
 

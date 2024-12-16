@@ -171,6 +171,10 @@ requirements['TestParameter']['Biceps547TimeInterval'] = 10
 # save and run as above
 ```
 
+### Execute sdccc from cli
+
+There exists a cli wrapper for the sdccc executable. If `pysdccc[cli]` is installed, `$ sdccc` can be used to execute arbitrary sdccc commands, e.g. `sdccc --version`. More information can be found [here](https://github.com/draegerwerk/sdccc?tab=readme-ov-file#running-sdccc).
+
 ### Logging
 
 A logger is available to log the output of the test suite `logging.getLogger('pysdccc')`.

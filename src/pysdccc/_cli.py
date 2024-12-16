@@ -110,34 +110,23 @@ def uninstall():
     """
     import shutil
 
-    try:
-        shutil.rmtree(_runner.DEFAULT_STORAGE_DIRECTORY)
-        click.echo("SDCcc has been uninstalled.")
-    except FileNotFoundError:
-        click.echo("SDCcc is not installed. Nothing to uninstall.")
-
-
-@click.command(short_help="Print the version of the SDCcc executable.")
-def version():
-    """Print the version of the SDCcc executable."""
-    try:
-        version_ = _runner.SdcccRunner(pathlib.Path().absolute()).get_version()
-    except FileNotFoundError as e:
-        raise click.ClickException("SDCcc is not installed. Please install using 'pysdccc install <url>'.") from e
-    except subprocess.CalledProcessError as e:
-        if e.stdout:
-            stdout = e.stdout.decode(_ENCODING).strip()
-            click.echo(stdout)
-        if e.stderr:
-            stderr = e.stderr.decode(_ENCODING).strip()
-            click.echo(stderr, err=True)
-        raise SystemExit(e.returncode) from e
-    if version_:
-        click.echo(version_)
-    else:
-        raise click.ClickException("Unable to detect version of SDCcc executable.")
+    shutil.rmtree(_runner.DEFAULT_STORAGE_DIRECTORY, ignore_errors=True)
 
 
 cli.add_command(install)
 cli.add_command(uninstall)
-cli.add_command(version)
+
+
+def sdccc():
+    try:
+        sdccc_exe = _runner.get_exe_path(_runner.DEFAULT_STORAGE_DIRECTORY)
+        with _runner.cwd(_runner.DEFAULT_STORAGE_DIRECTORY):
+            subprocess.run(  # noqa: S603
+                f"{sdccc_exe} {' '.join(sys.argv[1:])}",
+                check=True,
+            )
+    except FileNotFoundError as e:
+        raise click.ClickException("SDCcc is not installed. Please install using 'pysdccc install <url>'.") from e
+    except subprocess.CalledProcessError as e:
+        click.echo(e, err=True)
+        raise SystemExit(e.returncode) from e

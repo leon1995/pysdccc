@@ -45,7 +45,7 @@ def download(
     logger.info("Extracting sdccc to %s.", output)
     with zipfile.ZipFile(temporary_file.name) as f:
         f.extractall(output)
-    return _runner._get_exe_path(output)  # noqa: SLF001
+    return _runner.get_exe_path(output)
 
 
 def is_downloaded(version: str) -> bool:
@@ -88,7 +88,7 @@ async def download_async(
     logger.info("Extracting sdccc to %s.", output)
     with zipfile.ZipFile(temporary_file.name) as f:
         f.extractall(output)
-    return _runner._get_exe_path(output)  # noqa: SLF001
+    return _runner.get_exe_path(output)
 
 
 async def is_downloaded_async(version: str) -> bool:

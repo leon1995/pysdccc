@@ -77,7 +77,7 @@ DEFAULT_STORAGE_DIRECTORY = pathlib.Path(__file__).parent.joinpath("_sdccc")
 logger = logging.getLogger("pysdccc")
 
 
-def _get_exe_path(local_path: pathlib.Path) -> pathlib.Path:
+def get_exe_path(local_path: pathlib.Path) -> pathlib.Path:
     """Get the path to the SDCcc executable.
 
     This function searches the specified local path for the SDCcc executable file. It expects exactly one executable
@@ -106,7 +106,7 @@ def _load_configuration(path: pathlib.Path) -> dict[str, typing.Any]:
 
 
 @contextlib.contextmanager
-def _cwd(path: str | pathlib.Path) -> typing.Generator[None, None, None]:
+def cwd(path: str | pathlib.Path) -> typing.Generator[None, None, None]:
     """Change the current working directory to the specified path on context enter and revert to the original directory on context exit.
 
     :param path: The path to change the working directory to.
@@ -187,7 +187,7 @@ def _run_sdccc(exe_path: pathlib.Path, args: str, timeout: float | None) -> int:
     """
     logger.info('Executing "%s %s"', exe_path, args)
     with (
-        _cwd(exe_path.parent),
+        cwd(exe_path.parent),
         subprocess.Popen(  # noqa: S603
             f"{exe_path} {args}",
             stdout=subprocess.PIPE,
@@ -245,7 +245,7 @@ class _BaseRunner:
         :raises ValueError: If the provided paths are not absolute.
         """
         try:
-            self.exe = exe or _get_exe_path(DEFAULT_STORAGE_DIRECTORY).absolute()
+            self.exe = exe or get_exe_path(DEFAULT_STORAGE_DIRECTORY).absolute()
         except FileNotFoundError as e:
             raise FileNotFoundError("Have you downloaded sdccc?") from e
         if not self.exe.is_absolute():
@@ -350,7 +350,7 @@ class SdcccRunner(_BaseRunner):
 
     def get_version(self) -> str:
         """Get the version of the SDCcc executable."""
-        with _cwd(self.exe.parent):
+        with cwd(self.exe.parent):
             # use capture_output = True to get stdout and stderr instead of check_output which only collects stdout
             process = subprocess.run([str(self.exe), "--version"], check=True, capture_output=True)  # noqa: S603
         return process.stdout.decode().strip()
@@ -406,7 +406,7 @@ class SdcccRunnerAsync(_BaseRunner):
         args = self._prepare_execution_command(config, requirements, **kwargs)
         logger.info('Executing "%s %s"', self.exe, args)
         loop = loop or asyncio.get_running_loop()
-        with _cwd(self.exe.parent):
+        with cwd(self.exe.parent):
             transport, protocol = await loop.subprocess_exec(_SdcccSubprocessProtocol, self.exe, args, stdin=None)
         try:
             await asyncio.wait_for(protocol.closed_event.wait(), timeout=timeout)
@@ -422,7 +422,7 @@ class SdcccRunnerAsync(_BaseRunner):
 
     async def get_version(self) -> str | None:
         """Get the version of the SDCcc executable."""
-        with _cwd(self.exe.parent):
+        with cwd(self.exe.parent):
             process = await asyncio.create_subprocess_exec(
                 self.exe,
                 "--version",
