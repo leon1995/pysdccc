@@ -4,6 +4,7 @@ import asyncio
 import io
 import pathlib
 import random
+import subprocess
 import tempfile
 import uuid
 from unittest import mock
@@ -43,13 +44,13 @@ def test_load_configuration():
         assert _load_configuration(pathlib.Path("config.toml")) == {"key": "value"}
 
 
-def test_cwd():
+def testcwd():
     """Test that the current working directory is correctly changed and restored."""
-    original_cwd = pathlib.Path.cwd()
+    originalcwd = pathlib.Path.cwd()
     temp_dir = pathlib.Path(tempfile.gettempdir())
     with cwd(temp_dir):
         assert pathlib.Path.cwd() == temp_dir
-    assert pathlib.Path.cwd() == original_cwd
+    assert pathlib.Path.cwd() == originalcwd
 
 
 def test_check_requirements():
@@ -371,27 +372,56 @@ def test_parse_result():
 def test_sdccc_runner_version():
     """Test that the SdcccRunner correctly loads the version."""
     runner = SdcccRunner(pathlib.Path().absolute(), mock.MagicMock())
-    with mock.patch("subprocess.check_output") as mock_check_output, mock.patch("pysdccc._runner._cwd"):
-        version = uuid.uuid4().hex
-        mock_check_output.return_value = version
+    version = uuid.uuid4().hex
+    with mock.patch("subprocess.run") as mock_run, mock.patch("pysdccc._runner.cwd"):
+        mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0, stdout=version.encode(), stderr=b"")
         assert runner.get_version() == version
+
+    # test exception handling
+    returncode = int(uuid.uuid4())
+    stdout = uuid.uuid4().hex.encode()
+    stderr = uuid.uuid4().hex.encode()
+    with mock.patch("subprocess.Popen") as mock_popen, mock.patch("pysdccc._runner.cwd"):
+        mock_popen.return_value.__enter__.return_value.communicate.return_value = stdout, stderr
+        mock_popen.return_value.__enter__.return_value.poll.return_value = returncode
+        with pytest.raises(subprocess.CalledProcessError) as e:
+            assert runner.get_version() == ""
+    assert e.value.returncode == returncode
+    assert e.value.stdout == stdout
+    assert e.value.stderr == stderr
 
 
 @pytest.mark.asyncio
 async def test_sdccc_runner_version_async():
     """Test that the SdcccRunner correctly loads the version."""
     runner = SdcccRunnerAsync(pathlib.Path().absolute(), mock.MagicMock())
-    with mock.patch("asyncio.create_subprocess_exec") as mock_check_output, mock.patch("pysdccc._runner._cwd"):
-        version = uuid.uuid4().hex
-        fut = asyncio.Future()
-        mock_check_output.return_value.communicate = lambda: fut
+    version = uuid.uuid4().hex
+    fut = asyncio.Future()
+    with mock.patch("asyncio.create_subprocess_exec") as mock_process, mock.patch("pysdccc._runner.cwd"):
+        mock_process.return_value.returncode = 0
+        mock_process.return_value.communicate = lambda: fut
         fut.set_result((version.encode(), b""))
-        assert (await runner.get_version()) == version
+        assert await runner.get_version() == version
+
+    # test exception handling
+    fut = asyncio.Future()
+    returncode = int(uuid.uuid4())
+    stdout = uuid.uuid4().hex.encode()
+    stderr = uuid.uuid4().hex.encode()
+    with mock.patch("asyncio.create_subprocess_exec") as mock_process, mock.patch("pysdccc._runner.cwd"):
+        mock_process.return_value.returncode = returncode
+        mock_process.return_value.communicate = lambda: fut
+        fut.set_result((stdout, stderr))
+        with pytest.raises(subprocess.CalledProcessError) as e:
+            assert await runner.get_version() == ""
+    assert e.value.returncode == returncode
+    assert e.value.stdout == stdout
+    assert e.value.stderr == stderr
 
 
 def test_sdccc_runner_run():
     """Test that the SdcccRunner correctly runs the SDCcc executable."""
     runner = SdcccRunner(pathlib.Path().absolute(), mock.MagicMock())
-    with mock.patch("pysdccc._runner._run_sdccc") as mock_run_sdccc, mock.patch("pysdccc._runner._cwd"):
+    with mock.patch("pysdccc._runner._run_sdccc") as mock_run_sdccc, mock.patch("pysdccc._runner.cwd"):
         mock_run_sdccc.return_value = 0
         assert runner.run(pathlib.Path("config.toml").absolute(), pathlib.Path("requirements.toml").absolute()) == 0
