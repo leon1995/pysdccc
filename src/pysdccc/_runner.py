@@ -144,32 +144,16 @@ def check_requirements(provided: dict[str, dict[str, bool]], available: dict[str
                 raise KeyError(f'Requirement id "{standard}.{req}" not found')
 
 
-def _log_sdccc_stdout(pipe: io.TextIOWrapper) -> None:
-    """Log the stdout of the SDCcc process.
+def _log_pipe(pipe: io.TextIOWrapper, log_method: typing.Callable[[str], None]) -> None:
+    """Log the pipe of the rbt process.
 
-    This function reads lines from the provided stdout pipe of the SDCcc process and logs each line as an info message.
-
-    :param pipe: The stdout pipe of the SDCcc process.
+    :param pipe: The pipe of the rbt process.
+    :param log_method: The logging method to use for logging the pipe output.
     """
     with pipe:
         try:
             for line in iter(pipe.readline, b""):  # b'\n'-separated lines
-                logger.info(line.rstrip())
-        except ValueError:
-            pass  # pipe closed
-
-
-def _log_sdccc_stderr(pipe: io.TextIOWrapper) -> None:
-    """Log the stderr of the SDCcc process.
-
-    This function reads lines from the provided stderr pipe of the SDCcc process and logs each line as an error message.
-
-    :param pipe: The stderr pipe of the SDCcc process.
-    """
-    with pipe:
-        try:
-            for line in iter(pipe.readline, b""):  # b'\n'-separated lines
-                logger.error(line.rstrip())
+                log_method(line.rstrip())
         except ValueError:
             pass  # pipe closed
 
@@ -196,8 +180,8 @@ def _run_sdccc(exe_path: pathlib.Path, args: str, timeout: float | None) -> int:
             encoding="utf-8",
         ) as proc,
     ):
-        std_out_logger = threading.Thread(target=_log_sdccc_stdout, args=(proc.stdout,), daemon=True)
-        std_err_logger = threading.Thread(target=_log_sdccc_stderr, args=(proc.stderr,), daemon=True)
+        std_out_logger = threading.Thread(target=_log_pipe, args=(proc.stdout, logger.info), daemon=True)
+        std_err_logger = threading.Thread(target=_log_pipe, args=(proc.stderr, logger.error), daemon=True)
         std_out_logger.start()
         std_err_logger.start()
         try:
