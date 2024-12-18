@@ -85,12 +85,24 @@ def test_run_sdccc():
     # close pipes to avoid console spam
     std_out.close()
     std_err.close()
+    args = mock.MagicMock()
+    timeout = int(uuid.uuid4())
+    mock_wait = mock.MagicMock()
+    mock_wait.return_value = timeout
     with mock.patch("subprocess.Popen") as mock_popen:
         mock_popen.return_value.__enter__.return_value.stdout = std_out
         mock_popen.return_value.__enter__.return_value.stderr = std_err
-        mock_popen.return_value.__enter__.return_value.wait.return_value = 0
+        mock_popen.return_value.__enter__.return_value.wait = mock_wait
         mock_popen.return_value.__enter__.return_value.returncode = return_code
-        assert _run_sdccc(exe_path, mock.MagicMock(), None) == return_code
+        assert _run_sdccc(exe_path, args, timeout) == return_code
+    mock_popen.assert_called_with(
+        f"{exe_path} {args}",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        bufsize=0,
+        encoding="utf-8",
+    )
+    mock_wait.assert_called_with(timeout=timeout)
 
 
 def test_parse_results():

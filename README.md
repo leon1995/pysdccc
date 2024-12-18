@@ -13,7 +13,7 @@ Download from pypi using `pip install pysdccc`
 For this open source project the [Contributor License Agreement](Contributor_License_Agreement.md) governs all relevant activities and your contributions. By contributing to the project you agree to be bound by this Agreement and to licence your work accordingly.
 
 1. clone the repository
-2. [`uv sync --dev --all-extras`](https://docs.astral.sh/uv/reference/cli/#uv-sync)
+2. install dependencies, e.g. with [`uv sync --dev --all-extras`](https://docs.astral.sh/uv/reference/cli/#uv-sync)
 
 ## Usage
 

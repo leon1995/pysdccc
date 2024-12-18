@@ -150,12 +150,12 @@ def _log_pipe(pipe: io.TextIOWrapper, log_method: typing.Callable[[str], None]) 
     :param pipe: The pipe of the rbt process.
     :param log_method: The logging method to use for logging the pipe output.
     """
-    with pipe:
-        try:
+    try:
+        with pipe:
             for line in iter(pipe.readline, b""):  # b'\n'-separated lines
                 log_method(line.rstrip())
-        except ValueError:
-            pass  # pipe closed
+    except ValueError:
+        pass  # pipe closed
 
 
 def _run_sdccc(exe_path: pathlib.Path, args: str, timeout: float | None) -> int:
