@@ -372,7 +372,11 @@ class SdcccRunnerAsync(_BaseRunner):
         logger.info('Executing "%s %s"', self.exe, args)
         loop = loop or asyncio.get_running_loop()
         transport, protocol = await loop.subprocess_exec(
-            _SdcccSubprocessProtocol, self.exe, args, stdin=None, cwd=self.exe.parent,
+            _SdcccSubprocessProtocol,
+            self.exe,
+            args,
+            stdin=None,
+            cwd=self.exe.parent,
         )
         try:
             await asyncio.wait_for(protocol.closed_event.wait(), timeout=timeout)
@@ -389,7 +393,11 @@ class SdcccRunnerAsync(_BaseRunner):
     async def get_version(self) -> str | None:
         """Get the version of the SDCcc executable."""
         process = await asyncio.create_subprocess_exec(
-            self.exe, "--version", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, cwd=self.exe.parent,
+            self.exe,
+            "--version",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            cwd=self.exe.parent,
         )
         stdout, stderr = await process.communicate()
         if process.returncode:
