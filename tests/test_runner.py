@@ -5,7 +5,6 @@ import io
 import pathlib
 import random
 import subprocess
-import tempfile
 import uuid
 from unittest import mock
 

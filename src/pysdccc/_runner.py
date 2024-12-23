@@ -56,10 +56,8 @@ Usage
 """
 
 import asyncio
-import contextlib
 import io
 import logging
-import os
 import pathlib
 import subprocess
 import threading
@@ -157,13 +155,13 @@ def _run_sdccc(exe_path: pathlib.Path, args: str, timeout: float | None) -> int:
     """
     logger.info('Executing "%s %s"', exe_path, args)
     with subprocess.Popen(  # noqa: S603
-            f"{exe_path} {args}",
-            cwd=exe_path.parent,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            bufsize=0,
-            encoding="utf-8",
-        ) as proc:
+        f"{exe_path} {args}",
+        cwd=exe_path.parent,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        bufsize=0,
+        encoding="utf-8",
+    ) as proc:
         std_out_logger = threading.Thread(target=_log_pipe, args=(proc.stdout, logger.info), daemon=True)
         std_err_logger = threading.Thread(target=_log_pipe, args=(proc.stderr, logger.error), daemon=True)
         std_out_logger.start()
@@ -373,7 +371,9 @@ class SdcccRunnerAsync(_BaseRunner):
         args = self._prepare_execution_command(config, requirements, **kwargs)
         logger.info('Executing "%s %s"', self.exe, args)
         loop = loop or asyncio.get_running_loop()
-        transport, protocol = await loop.subprocess_exec(_SdcccSubprocessProtocol, self.exe, args, stdin=None, cwd=self.exe.parent)
+        transport, protocol = await loop.subprocess_exec(
+            _SdcccSubprocessProtocol, self.exe, args, stdin=None, cwd=self.exe.parent,
+        )
         try:
             await asyncio.wait_for(protocol.closed_event.wait(), timeout=timeout)
         except TimeoutError:
@@ -389,11 +389,7 @@ class SdcccRunnerAsync(_BaseRunner):
     async def get_version(self) -> str | None:
         """Get the version of the SDCcc executable."""
         process = await asyncio.create_subprocess_exec(
-            self.exe,
-            "--version",
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            cwd=self.exe.parent
+            self.exe, "--version", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, cwd=self.exe.parent,
         )
         stdout, stderr = await process.communicate()
         if process.returncode:
