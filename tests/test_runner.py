@@ -20,7 +20,6 @@ from pysdccc._runner import (
     _load_configuration,
     _run_sdccc,
     check_requirements,
-    cwd,
     get_exe_path,
     parse_results,
 )
@@ -42,15 +41,6 @@ def test_load_configuration():
     with mock.patch("toml.load") as mock_load:
         mock_load.return_value = {"key": "value"}
         assert _load_configuration(pathlib.Path("config.toml")) == {"key": "value"}
-
-
-def testcwd():
-    """Test that the current working directory is correctly changed and restored."""
-    originalcwd = pathlib.Path.cwd()
-    temp_dir = pathlib.Path(tempfile.gettempdir())
-    with cwd(temp_dir):
-        assert pathlib.Path.cwd() == temp_dir
-    assert pathlib.Path.cwd() == originalcwd
 
 
 def test_check_requirements():
@@ -101,6 +91,7 @@ def test_run_sdccc():
         stderr=subprocess.PIPE,
         bufsize=0,
         encoding="utf-8",
+        cwd=exe_path.parent,
     )
     mock_wait.assert_called_with(timeout=timeout)
 
@@ -385,7 +376,7 @@ def test_sdccc_runner_version():
     """Test that the SdcccRunner correctly loads the version."""
     runner = SdcccRunner(pathlib.Path().absolute(), mock.MagicMock())
     version = uuid.uuid4().hex
-    with mock.patch("subprocess.run") as mock_run, mock.patch("pysdccc._runner.cwd"):
+    with mock.patch("subprocess.run") as mock_run:
         mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0, stdout=version.encode(), stderr=b"")
         assert runner.get_version() == version
 
@@ -393,7 +384,7 @@ def test_sdccc_runner_version():
     returncode = int(uuid.uuid4())
     stdout = uuid.uuid4().hex.encode()
     stderr = uuid.uuid4().hex.encode()
-    with mock.patch("subprocess.Popen") as mock_popen, mock.patch("pysdccc._runner.cwd"):
+    with mock.patch("subprocess.Popen") as mock_popen:
         mock_popen.return_value.__enter__.return_value.communicate.return_value = stdout, stderr
         mock_popen.return_value.__enter__.return_value.poll.return_value = returncode
         with pytest.raises(subprocess.CalledProcessError) as e:
@@ -409,7 +400,7 @@ async def test_sdccc_runner_version_async():
     runner = SdcccRunnerAsync(pathlib.Path().absolute(), mock.MagicMock())
     version = uuid.uuid4().hex
     fut = asyncio.Future()
-    with mock.patch("asyncio.create_subprocess_exec") as mock_process, mock.patch("pysdccc._runner.cwd"):
+    with mock.patch("asyncio.create_subprocess_exec") as mock_process:
         mock_process.return_value.returncode = 0
         mock_process.return_value.communicate = lambda: fut
         fut.set_result((version.encode(), b""))
@@ -420,7 +411,7 @@ async def test_sdccc_runner_version_async():
     returncode = int(uuid.uuid4())
     stdout = uuid.uuid4().hex.encode()
     stderr = uuid.uuid4().hex.encode()
-    with mock.patch("asyncio.create_subprocess_exec") as mock_process, mock.patch("pysdccc._runner.cwd"):
+    with mock.patch("asyncio.create_subprocess_exec") as mock_process:
         mock_process.return_value.returncode = returncode
         mock_process.return_value.communicate = lambda: fut
         fut.set_result((stdout, stderr))
@@ -434,6 +425,6 @@ async def test_sdccc_runner_version_async():
 def test_sdccc_runner_run():
     """Test that the SdcccRunner correctly runs the SDCcc executable."""
     runner = SdcccRunner(pathlib.Path().absolute(), mock.MagicMock())
-    with mock.patch("pysdccc._runner._run_sdccc") as mock_run_sdccc, mock.patch("pysdccc._runner.cwd"):
+    with mock.patch("pysdccc._runner._run_sdccc") as mock_run_sdccc:
         mock_run_sdccc.return_value = 0
         assert runner.run(pathlib.Path("config.toml").absolute(), pathlib.Path("requirements.toml").absolute()) == 0

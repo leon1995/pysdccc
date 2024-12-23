@@ -120,13 +120,15 @@ cli.add_command(uninstall)
 def sdccc():
     try:
         sdccc_exe = _runner.get_exe_path(_runner.DEFAULT_STORAGE_DIRECTORY)
-        with _runner.cwd(_runner.DEFAULT_STORAGE_DIRECTORY):
-            subprocess.run(  # noqa: S603
-                f"{sdccc_exe} {' '.join(sys.argv[1:])}",
-                check=True,
-            )
+        #with _runner.cwd(_runner.DEFAULT_STORAGE_DIRECTORY):
+        subprocess.run(  # noqa: S603
+            f"{sdccc_exe} {' '.join(sys.argv[1:])}",
+            check=True,
+            cwd=sdccc_exe.parent,
+        )
     except FileNotFoundError as e:
-        raise click.ClickException("SDCcc is not installed. Please install using 'pysdccc install <url>'.") from e
+        click.ClickException("sdccc is not installed. Please install using 'pysdccc install <url>'.").show()
+        raise SystemExit(1) from e
     except subprocess.CalledProcessError as e:
         click.echo(e, err=True)
         raise SystemExit(e.returncode) from e

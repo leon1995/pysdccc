@@ -105,20 +105,6 @@ def _load_configuration(path: pathlib.Path) -> dict[str, typing.Any]:
     return dict(toml.load(path))
 
 
-@contextlib.contextmanager
-def cwd(path: str | pathlib.Path) -> typing.Generator[None, None, None]:
-    """Change the current working directory to the specified path on context enter and revert to the original directory on context exit.
-
-    :param path: The path to change the working directory to.
-    """
-    origin = pathlib.Path.cwd()
-    try:
-        os.chdir(path)
-        yield
-    finally:
-        os.chdir(origin)
-
-
 def check_requirements(provided: dict[str, dict[str, bool]], available: dict[str, dict[str, bool]]) -> None:
     """Check if the provided requirements are supported by the available requirements.
 
@@ -170,16 +156,14 @@ def _run_sdccc(exe_path: pathlib.Path, args: str, timeout: float | None) -> int:
     :return: The exit code of the SDCcc process.
     """
     logger.info('Executing "%s %s"', exe_path, args)
-    with (
-        cwd(exe_path.parent),
-        subprocess.Popen(  # noqa: S603
+    with subprocess.Popen(  # noqa: S603
             f"{exe_path} {args}",
+            cwd=exe_path.parent,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             bufsize=0,
             encoding="utf-8",
-        ) as proc,
-    ):
+        ) as proc:
         std_out_logger = threading.Thread(target=_log_pipe, args=(proc.stdout, logger.info), daemon=True)
         std_err_logger = threading.Thread(target=_log_pipe, args=(proc.stderr, logger.error), daemon=True)
         std_out_logger.start()
@@ -334,9 +318,8 @@ class SdcccRunner(_BaseRunner):
 
     def get_version(self) -> str:
         """Get the version of the SDCcc executable."""
-        with cwd(self.exe.parent):
-            # use capture_output = True to get stdout and stderr instead of check_output which only collects stdout
-            process = subprocess.run([str(self.exe), "--version"], check=True, capture_output=True)  # noqa: S603
+        # use capture_output = True to get stdout and stderr instead of check_output which only collects stdout
+        process = subprocess.run([str(self.exe), "--version"], check=True, capture_output=True, cwd=self.exe.parent)  # noqa: S603
         return process.stdout.decode().strip()
 
 
@@ -390,8 +373,7 @@ class SdcccRunnerAsync(_BaseRunner):
         args = self._prepare_execution_command(config, requirements, **kwargs)
         logger.info('Executing "%s %s"', self.exe, args)
         loop = loop or asyncio.get_running_loop()
-        with cwd(self.exe.parent):
-            transport, protocol = await loop.subprocess_exec(_SdcccSubprocessProtocol, self.exe, args, stdin=None)
+        transport, protocol = await loop.subprocess_exec(_SdcccSubprocessProtocol, self.exe, args, stdin=None, cwd=self.exe.parent)
         try:
             await asyncio.wait_for(protocol.closed_event.wait(), timeout=timeout)
         except TimeoutError:
@@ -406,13 +388,13 @@ class SdcccRunnerAsync(_BaseRunner):
 
     async def get_version(self) -> str | None:
         """Get the version of the SDCcc executable."""
-        with cwd(self.exe.parent):
-            process = await asyncio.create_subprocess_exec(
-                self.exe,
-                "--version",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
+        process = await asyncio.create_subprocess_exec(
+            self.exe,
+            "--version",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            cwd=self.exe.parent
+        )
         stdout, stderr = await process.communicate()
         if process.returncode:
             error = subprocess.CalledProcessError(process.returncode, f"{self.exe} --version")
