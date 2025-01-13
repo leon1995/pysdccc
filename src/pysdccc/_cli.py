@@ -1,5 +1,5 @@
+import contextlib
 import io
-import locale
 import pathlib
 import subprocess
 import sys
@@ -42,8 +42,6 @@ class ProxyType(click.ParamType):
 
 PROXY = ProxyType()
 
-_ENCODING = "utf-8" if sys.flags.utf8_mode else locale.getencoding()
-
 
 def _download_to_stream(
     url: httpx.URL,
@@ -77,7 +75,7 @@ def _download(
             f.extract(member, output)
 
 
-@click.group()
+@click.group(help="Manage sdccc installation.")
 @click.version_option(message="%(version)s")
 def cli():
     pass
@@ -102,15 +100,16 @@ def install(url: httpx.URL, proxy: httpx.Proxy | None):
         raise click.ClickException(f"Failed to download and extract SDCcc from {url}: {e}.") from e
 
 
-@click.command(short_help="Uninstall the SDCcc executable by removing the specified directory.")
+@click.command(short_help="Uninstall the SDCcc executable by removing the directory.")
 def uninstall():
     """Uninstall the SDCcc executable.
 
-    This function removes the SDCcc executable from the specified directory.
+    This function removes the SDCcc executable from the directory.
     """
     import shutil
 
-    shutil.rmtree(_runner.DEFAULT_STORAGE_DIRECTORY, ignore_errors=True)
+    with contextlib.suppress(FileNotFoundError):
+        shutil.rmtree(_runner.DEFAULT_STORAGE_DIRECTORY)
 
 
 cli.add_command(install)
