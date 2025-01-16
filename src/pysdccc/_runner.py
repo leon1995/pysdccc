@@ -12,12 +12,6 @@ SdcccRunner
 Functions
 ---------
 
-local_path_from_url(url: urllib.parse.ParseResult) -> pathlib.Path
-    Get the local path where the version from the URL is stored.
-
-download(url: urllib.parse.ParseResult, proxy: tuple[str, int] | None = None, timeout: int = 60) -> pathlib.Path
-    Download the specified version from the default URL to a temporary directory.
-
 check_requirements(provided: dict[str, dict[str, bool]], available: dict[str, dict[str, bool]]) -> None
     Check if the provided requirements are supported by the available requirements.
 
@@ -45,14 +39,11 @@ Usage
     runner.check_requirements(pathlib.Path("/absolute/path/to/user-requirements.toml"))
 
     # Run the SDCcc executable with the specified configuration and requirements
-    exit_code = runner.run(
+    exit_code, direct_result, invariant_result = runner.run(
         config=pathlib.Path("/absolute/path/to/config.toml"),
         requirements=pathlib.Path("/absolute/path/to/requirements.toml"),
         timeout=3600  # 1 hour timeout
     )
-
-    # Get the parsed results of the test run
-    direct_results, invariant_results = runner.get_result()
 """
 
 import asyncio
@@ -70,8 +61,6 @@ DIRECT_TEST_RESULT_FILE_NAME = 'TEST-SDCcc_direct.xml'
 INVARIANT_TEST_RESULT_FILE_NAME = 'TEST-SDCcc_invariant.xml'
 DEFAULT_STORAGE_DIRECTORY = pathlib.Path(__file__).parent.joinpath('_sdccc')
 """Default directory to store the downloaded sdccc versions."""
-
-logger = logging.getLogger('pysdccc')
 
 
 def get_exe_path(local_path: pathlib.Path) -> pathlib.Path:
@@ -268,7 +257,7 @@ class SdcccRunner(_BaseRunner):
         """Get the version of the SDCcc executable."""
         # use capture_output = True to get stdout and stderr instead of check_output which only collects stdout
         process = subprocess.run([str(self.exe), '--version'], check=True, capture_output=True, cwd=self.exe.parent)  # noqa: S603
-        return process.stdout.decode().strip()
+        return process.stdout.decode(_common.ENCODING).strip()
 
 
 class _SdcccSubprocessProtocol(asyncio.SubprocessProtocol):
@@ -277,12 +266,13 @@ class _SdcccSubprocessProtocol(asyncio.SubprocessProtocol):
 
     def __init__(self):
         self.closed_event = asyncio.Event()
+        self.logger = logging.getLogger('pysdccc')
 
     def pipe_data_received(self, fd: int, data: bytes):
         if fd == self._STDOUT:
-            logger.info(data.decode(_common.ENCODING).rstrip())
+            self.logger.info(data.decode(_common.ENCODING).rstrip())
         elif fd == self._STDERR:
-            logger.error(data.decode(_common.ENCODING).rstrip())
+            self.logger.error(data.decode(_common.ENCODING).rstrip())
         else:
             raise RuntimeError(f'Unexpected file descriptor {fd}')
 
@@ -362,3 +352,18 @@ class SdcccRunnerAsync(_BaseRunner):
             error.stderr = stderr
             raise error
         return stdout.decode(_common.ENCODING).strip() if stdout else None
+
+async def main():
+    import tempfile
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter('%(message)s'))
+    logger = logging.getLogger('pysdccc')
+    logger.addHandler(handler)
+    logger.level = logging.DEBUG
+    with tempfile.TemporaryDirectory() as dir:
+        runner = SdcccRunnerAsync(pathlib.Path(dir).absolute())
+        print(await runner.run(config=pathlib.Path().absolute(), requirements=pathlib.Path().absolute()))
+
+if __name__ == '__main__':
+    import asyncio
+    asyncio.run(main())

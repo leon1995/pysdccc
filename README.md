@@ -37,29 +37,24 @@ def main():
     )
 
     try:
-        runner.run(
+        return_code, direct_result, invariant_result = runner.run(  # https://github.com/Draegerwerk/SDCcc/?tab=readme-ov-file#exit-codes
             config=pathlib.Path("/path/to/configuration/file.toml"),
             requirements=pathlib.Path("/path/to/requirements/file.toml"),
         )
     except subprocess.TimeoutExpired:
         print("Timeout occurred")
         return
-    except subprocess.CalledProcessError as e:
-        return_code = e.returncode  # https://github.com/Draegerwerk/SDCcc/?tab=readme-ov-file#exit-codes
+    
+    if direct_result is None or invariant_result is None:
+        print("No result file available")
+        return
 
-    try:
-        direct_result, invariant_results = runner._get_result()
-    except FileNotFoundError:
-        print("No results available")
-    else:
-        for test_case in direct_result + invariant_results:
-            # add handling if test_case passed or failed...
-            print(f"{test_case.name}: {test_case.is_passed}")
+    for test_case in direct_result + invariant_result:
+        print(f"{test_case.name}: {test_case.is_passed}")
 ```
 If you look for an async version
 ```python
 import pathlib
-import subprocess
 
 import pysdccc
 
@@ -73,18 +68,15 @@ async def main():
     )
 
     try:
-        await runner.run(
+        return_code, direct_result, invariant_result = await runner.run(  # https://github.com/Draegerwerk/SDCcc/?tab=readme-ov-file#exit-codes
             config=pathlib.Path("/path/to/configuration/file.toml"),
             requirements = pathlib.Path("/path/to/requirements/file.toml"),
         )
     except TimeoutError:
         print("Timeout occurred")
         return
-    except subprocess.CalledProcessError as e:
-        return_code = e.returncode  # https://github.com/Draegerwerk/SDCcc/?tab=readme-ov-file#exit-codes
-
     
-    # continue ...
+    # checkout example from above ...
 ```
 
 ### Download an sdccc executable
@@ -146,8 +138,8 @@ runner = pysdccc.SdcccRunner(
 # optionally, check whether you did not add a requirement that is not available
 runner.check_requirements(requirements_path)
 runner.run(
-    pathlib.Path('/path/to/configuration/file.toml'),
-    requirements_path,
+    config=pathlib.Path('/path/to/configuration/file.toml'),
+    requirements=requirements_path,
 )
 
 # or, if you have already downloaded the version
@@ -177,8 +169,8 @@ runner = pysdccc.SdcccRunner(
     pathlib.Path('/path/to/sdccc/result/directory'),
 )
 runner.run(
-    pathlib.Path('/path/to/configuration/file.toml'),
-    pathlib.Path('/path/to/requirements/file.toml'),
+    config=pathlib.Path('/path/to/configuration/file.toml'),
+    requirements=pathlib.Path('/path/to/requirements/file.toml'),
     testparam=requirements_path,
 )
 
@@ -197,6 +189,7 @@ There exists a cli wrapper for the sdccc executable. If `pysdccc[cli]` is instal
 A logger is available to log the output of the test suite `logging.getLogger('pysdccc')`.
 Please note that each line of the test suite output is logged as a separate log message.
 Stdout is logged as info and stderr as error.
+> When using the `pysdccc.SdcccRunner` the output of the sdccc process is captured by the logger.
 
 ## Notices
 
