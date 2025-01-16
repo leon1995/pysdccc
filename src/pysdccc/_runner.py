@@ -209,7 +209,7 @@ class _BaseRunner:
             return None
 
     def _prepare_command(
-        self, *args: str, config: pathlib.Path, requirements: pathlib.Path, **kwargs: typing.Any
+        self, *args: str, config: pathlib.Path, requirements: pathlib.Path, **kwargs: typing.Any,
     ) -> str:
         if not config.is_absolute():
             raise ValueError('Path to config file must be absolute')
@@ -252,7 +252,7 @@ class SdcccRunner(_BaseRunner):
         :raises subprocess.TimeoutExpired: If the process is running longer than the timeout.
         """
         command = self._prepare_command(
-            str(self.exe), config=pathlib.Path(config), requirements=pathlib.Path(requirements), **kwargs
+            str(self.exe), config=pathlib.Path(config), requirements=pathlib.Path(requirements), **kwargs,
         )
         try:
             return_code = subprocess.run(command, timeout=timeout, check=True, cwd=self.exe.parent).returncode  # noqa: S603

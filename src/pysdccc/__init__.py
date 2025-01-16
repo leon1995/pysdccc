@@ -9,18 +9,17 @@ from pysdccc._runner import (
     check_requirements,
 )
 
-__version__ = "0.0.0"
+__version__ = '0.0.0'
 
 __all__ = [
-    "DEFAULT_STORAGE_DIRECTORY",
-    "SdcccRunner",
-    "SdcccRunnerAsync",
-    "TestCase",
-    "TestSuite",
-    "check_requirements",
-    "download",
-    "download_async",
-    "is_downloaded",
-    "is_downloaded_async",
-    "parse_results",
+    'DEFAULT_STORAGE_DIRECTORY',
+    'SdcccRunner',
+    'SdcccRunnerAsync',
+    'TestCase',
+    'TestSuite',
+    'check_requirements',
+    'download',
+    'download_async',
+    'is_downloaded',
+    'is_downloaded_async',
 ]

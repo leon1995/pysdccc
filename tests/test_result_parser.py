@@ -63,39 +63,39 @@ def test_test_suite_iter():
         assert isinstance(case, TestCase)
 
 
-@mock.patch("pysdccc._result_parser.junitparser.JUnitXml.fromfile")
+@mock.patch('pysdccc._result_parser.junitparser.JUnitXml.fromfile')
 def test_test_suite_from_file(mock_fromfile: mock.MagicMock):
     """Test that the from_file method of TestSuite returns a TestSuite instance."""
     mock_suite = JUnitTestSuite()
     mock_fromfile.return_value = mock_suite
-    suite = TestSuite.from_file("dummy_path")
+    suite = TestSuite.from_file('dummy_path')
     assert isinstance(suite, TestSuite)
     assert suite == mock_suite
 
     mock_fromfile.return_value = JUnitXml()
-    with pytest.raises(ValueError, match=f"Expected class {junitparser.TestSuite}, got {type(JUnitXml())}"):
-        TestSuite.from_file("dummy_path")
+    with pytest.raises(ValueError, match=f'Expected class {junitparser.TestSuite}, got {type(JUnitXml())}'):
+        TestSuite.from_file('dummy_path')
 
 
 def test_result_file_parser():
     """Test whether the test identifier and description is correctly parsed."""
     data = (
         (
-            "BICEPS.R5039",
-            "Sends a get context states message with empty handle ref and verifies that the response "
-            "contains all context states of the mdib.",
+            'BICEPS.R5039',
+            'Sends a get context states message with empty handle ref and verifies that the response '
+            'contains all context states of the mdib.',
         ),
         (
-            "BICEPS.R5040",
-            "Verifies that for every known context descriptor handle the corresponding context states are returned.",
+            'BICEPS.R5040',
+            'Verifies that for every known context descriptor handle the corresponding context states are returned.',
         ),
         (
-            "BICEPS.R5041",
-            "Verifies that for every known context state handle the corresponding context state is returned.",
+            'BICEPS.R5041',
+            'Verifies that for every known context state handle the corresponding context state is returned.',
         ),
-        ("SDCccTestRunValidity", "SDCcc Test Run Validity"),
+        ('SDCccTestRunValidity', 'SDCcc Test Run Validity'),
     )
-    suite = TestSuite.from_file(pathlib.Path(__file__).parent.joinpath("sdccc_result.xml"))
+    suite = TestSuite.from_file(pathlib.Path(__file__).parent.joinpath('sdccc_result.xml'))
     assert isinstance(suite, TestSuite)
     assert len(data) == len(suite)
     for test_case, (identifier, description) in zip(suite, data, strict=True):

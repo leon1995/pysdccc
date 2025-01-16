@@ -5,7 +5,7 @@ import typing
 
 PATH_TYPE = typing.Union[str, os.PathLike[str]]  # noqa: UP007
 
-ENCODING = "utf-8" if sys.flags.utf8_mode else locale.getencoding()
+ENCODING = 'utf-8' if sys.flags.utf8_mode else locale.getencoding()
 
 
 def build_command(*args: str, **kwargs: typing.Any) -> str:

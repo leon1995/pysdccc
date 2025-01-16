@@ -45,7 +45,7 @@ class TestIdentifierElement(junitparser.Element):
     """
 
     __test__ = False
-    _tag = "test-identifier"
+    _tag = 'test-identifier'
 
     @property
     def text(self) -> str | None:
@@ -64,7 +64,7 @@ class TestDescriptionElement(junitparser.Element):
     """
 
     __test__ = False
-    _tag = "test-description"
+    _tag = 'test-description'
 
     @property
     def text(self) -> str | None:
@@ -113,7 +113,7 @@ class TestSuite(junitparser.TestSuite):
             yield TestCase.fromelem(elem)  # type: ignore[no-untyped-call]
 
     @classmethod
-    def from_file(cls, file: pathlib.Path | str) -> "TestSuite":
+    def from_file(cls, file: pathlib.Path | str) -> 'TestSuite':
         """Parse a test suite from a given file.
 
         This method reads a JUnit XML file and parses it into a `TestSuite` object containing custom elements.
@@ -125,5 +125,5 @@ class TestSuite(junitparser.TestSuite):
         """
         suite = junitparser.JUnitXml.fromfile(str(file))
         if not isinstance(suite, junitparser.TestSuite):
-            raise ValueError(f"Expected class {junitparser.TestSuite}, got {type(suite)}")
+            raise ValueError(f'Expected class {junitparser.TestSuite}, got {type(suite)}')
         return cls.fromelem(suite)  # type: ignore[no-untyped-call,no-any-return]

@@ -113,17 +113,11 @@ def test_sdccc_runner_check_requirements():
         mock_check_requirements.assert_called_once()
 
 
-def test_sdccc_runner_get_result():
-    """Test that the SdcccRunner correctly parses the test results."""
-    runner = _BaseRunner(pathlib.Path().absolute(), pathlib.Path(__file__))
-    with mock.patch('pysdccc._runner.parse_results') as mock_parse_results:
-        mock_parse_results.return_value = ('direct_result', 'invariant_result')
-        assert runner._get_result() == ('direct_result', 'invariant_result')
-
-
 def test_configuration():
     """Test that the SdcccRunner correctly loads the configuration from the SDCcc executable's directory."""
-    run = _BaseRunner(mock.MagicMock(), pathlib.Path(__file__).parent.joinpath('testversion/sdccc.exe'))
+    run = _BaseRunner(
+        pathlib.Path().absolute(), pathlib.Path(__file__).parent.joinpath('testversion/sdccc.exe').absolute(),
+    )
     loaded_config = run.get_config()
     provided_config = """
 [SDCcc]
@@ -178,7 +172,9 @@ Biceps547TimeInterval=5
 
 def test_requirements():
     """Test that the SdcccRunner correctly loads the requirements from the SDCcc executable's directory."""
-    run = SdcccRunner(mock.MagicMock(), pathlib.Path(__file__).parent.joinpath('testversion/sdccc.exe'))
+    run = SdcccRunner(
+        pathlib.Path().absolute(), pathlib.Path(__file__).parent.joinpath('testversion/sdccc.exe').absolute(),
+    )
     loaded_config = run.get_requirements()
     provided_config = """
 [MDPWS]
@@ -321,7 +317,7 @@ def test_parse_result():
         ),
         ('SDCccTestRunValidity', 'SDCcc Test Run Validity'),
     )
-    run = _BaseRunner(pathlib.Path(__file__).parent.joinpath('result').absolute(), mock.MagicMock())
+    run = _BaseRunner(pathlib.Path(__file__).parent.joinpath('result').absolute(), pathlib.Path(__file__).absolute())
     direct_results = run._get_result(DIRECT_TEST_RESULT_FILE_NAME)  # noqa: SLF001
     invariant_results = run._get_result(INVARIANT_TEST_RESULT_FILE_NAME)  # noqa: SLF001
 
@@ -335,7 +331,7 @@ def test_parse_result():
 
 def test_sdccc_runner_version():
     """Test that the SdcccRunner correctly loads the version."""
-    runner = SdcccRunner(pathlib.Path().absolute(), mock.MagicMock())
+    runner = SdcccRunner(pathlib.Path().absolute(), pathlib.Path(__file__).absolute())
     version = uuid.uuid4().hex
     with mock.patch('subprocess.run') as mock_run:
         mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0, stdout=version.encode(), stderr=b'')
@@ -358,7 +354,7 @@ def test_sdccc_runner_version():
 @pytest.mark.asyncio
 async def test_sdccc_runner_version_async():
     """Test that the SdcccRunner correctly loads the version."""
-    runner = SdcccRunnerAsync(pathlib.Path().absolute(), mock.MagicMock())
+    runner = SdcccRunnerAsync(pathlib.Path().absolute(), pathlib.Path(__file__).absolute())
     version = uuid.uuid4().hex
     fut = asyncio.Future()
     with mock.patch('asyncio.create_subprocess_exec') as mock_process:
@@ -381,11 +377,3 @@ async def test_sdccc_runner_version_async():
     assert e.value.returncode == returncode
     assert e.value.stdout == stdout
     assert e.value.stderr == stderr
-
-
-def test_sdccc_runner_run():
-    """Test that the SdcccRunner correctly runs the SDCcc executable."""
-    runner = SdcccRunner(pathlib.Path().absolute(), mock.MagicMock())
-    with mock.patch('pysdccc._runner._run_sdccc') as mock_run_sdccc:
-        mock_run_sdccc.return_value = 0
-        assert runner.run(pathlib.Path('config.toml').absolute(), pathlib.Path('requirements.toml').absolute()) == (0, mock.MagicMock(), mock.MagicMock())

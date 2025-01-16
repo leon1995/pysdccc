@@ -18,26 +18,26 @@ except ImportError as import_error:
 
 
 class UrlType(click.ParamType):
-    name = "url"
+    name = 'url'
 
     def convert(self, value: str, param: Any, ctx: Any) -> httpx.URL:
         try:
             return httpx.URL(value)
         except Exception as e:  # noqa: BLE001
-            self.fail(f"{value!r} is not a valid proxy: {e}", param, ctx)
+            self.fail(f'{value!r} is not a valid proxy: {e}', param, ctx)
 
 
 URL = UrlType()
 
 
 class ProxyType(click.ParamType):
-    name = "proxy"
+    name = 'proxy'
 
     def convert(self, value: str, param: Any, ctx: Any) -> httpx.Proxy:
         try:
             return httpx.Proxy(value)
         except Exception as e:  # noqa: BLE001
-            self.fail(f"{value!r} is not a valid proxy: {e}", param, ctx)
+            self.fail(f'{value!r} is not a valid proxy: {e}', param, ctx)
 
 
 PROXY = ProxyType()
@@ -48,9 +48,9 @@ def _download_to_stream(
     stream: io.IOBase,
     proxy: httpx.Proxy | None = None,
 ) -> None:
-    with httpx.stream("GET", url, follow_redirects=True, proxy=proxy) as response:
-        total = int(response.headers["Content-Length"])
-        with click.progressbar(length=total, label="Downloading", show_eta=True, width=0) as progress:
+    with httpx.stream('GET', url, follow_redirects=True, proxy=proxy) as response:
+        total = int(response.headers['Content-Length'])
+        with click.progressbar(length=total, label='Downloading', show_eta=True, width=0) as progress:
             num_bytes_downloaded = response.num_bytes_downloaded
             for chunk in response.iter_bytes():
                 stream.write(chunk)
@@ -63,29 +63,29 @@ def _download(
     output: pathlib.Path,
     proxy: httpx.Proxy | None = None,
 ):
-    click.echo(f"Downloading sdccc from {url}.")
-    with tempfile.NamedTemporaryFile("wb", suffix=".zip", delete=False) as temporary_file:
+    click.echo(f'Downloading sdccc from {url}.')
+    with tempfile.NamedTemporaryFile('wb', suffix='.zip', delete=False) as temporary_file:
         _download_to_stream(url, temporary_file, proxy=proxy)  # type: ignore[arg-type]
-    click.echo(f"Extracting sdccc to {output}.")
+    click.echo(f'Extracting sdccc to {output}.')
     with (
         zipfile.ZipFile(temporary_file.name) as f,
-        click.progressbar(f.infolist(), label="Extracting", width=0) as progress,
+        click.progressbar(f.infolist(), label='Extracting', width=0) as progress,
     ):
         for member in progress:
             f.extract(member, output)
 
 
-@click.group(help="Manage sdccc installation.")
-@click.version_option(message="%(version)s")
+@click.group(help='Manage sdccc installation.')
+@click.version_option(message='%(version)s')
 def cli():
     pass
 
 
 @click.command(
-    short_help="Install the SDCcc executable from the specified URL. Releases can be found at https://github.com/Draegerwerk/SDCcc/releases.",
+    short_help='Install the SDCcc executable from the specified URL. Releases can be found at https://github.com/Draegerwerk/SDCcc/releases.',
 )
-@click.argument("url", type=URL)
-@click.option("--proxy", help="Proxy server to use for the download.", type=PROXY)
+@click.argument('url', type=URL)
+@click.option('--proxy', help='Proxy server to use for the download.', type=PROXY)
 def install(url: httpx.URL, proxy: httpx.Proxy | None):
     """Download the specified version from the default URL to a temporary directory.
 
@@ -97,10 +97,10 @@ def install(url: httpx.URL, proxy: httpx.Proxy | None):
     try:
         _download(url, _runner.DEFAULT_STORAGE_DIRECTORY, proxy)
     except Exception as e:
-        raise click.ClickException(f"Failed to download and extract SDCcc from {url}: {e}.") from e
+        raise click.ClickException(f'Failed to download and extract SDCcc from {url}: {e}.') from e
 
 
-@click.command(short_help="Uninstall the SDCcc executable by removing the directory.")
+@click.command(short_help='Uninstall the SDCcc executable by removing the directory.')
 def uninstall():
     """Uninstall the SDCcc executable.
 

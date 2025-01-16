@@ -9,7 +9,7 @@ import httpx
 
 from pysdccc import _runner
 
-logger = logging.getLogger("pysdccc.download")
+logger = logging.getLogger('pysdccc.download')
 
 
 def _download_to_stream(
@@ -18,7 +18,7 @@ def _download_to_stream(
     proxy: httpx.Proxy | None = None,
     timeout: float | None = None,
 ) -> None:
-    with httpx.stream("GET", url, follow_redirects=True, proxy=proxy, timeout=timeout) as response:
+    with httpx.stream('GET', url, follow_redirects=True, proxy=proxy, timeout=timeout) as response:
         response.raise_for_status()
         for chunk in response.iter_bytes():
             stream.write(chunk)
@@ -38,11 +38,11 @@ def download(
     :param output: The path to the directory where the downloaded executable will be extracted. If None, the default storage directory is used.
     """
     url = httpx.URL(url)
-    logger.info("Downloading sdccc from %s.", url)
-    with tempfile.NamedTemporaryFile("wb", suffix=".zip", delete=False) as temporary_file:
+    logger.info('Downloading sdccc from %s.', url)
+    with tempfile.NamedTemporaryFile('wb', suffix='.zip', delete=False) as temporary_file:
         _download_to_stream(url, temporary_file, proxy=proxy, timeout=timeout)  # type: ignore[arg-type]
     output = output or _runner.DEFAULT_STORAGE_DIRECTORY
-    logger.info("Extracting sdccc to %s.", output)
+    logger.info('Extracting sdccc to %s.', output)
     with zipfile.ZipFile(temporary_file.name) as f:
         f.extractall(output)
     return _runner.get_exe_path(output)
@@ -68,7 +68,7 @@ async def _download_to_stream_async(
     timeout: float | None = None,
 ) -> None:
     client = httpx.AsyncClient(follow_redirects=True, proxy=proxy)
-    async with client.stream("GET", url, timeout=timeout) as response:
+    async with client.stream('GET', url, timeout=timeout) as response:
         response.raise_for_status()
         async for chunk in response.aiter_bytes():
             stream.write(chunk)
@@ -81,11 +81,11 @@ async def download_async(
     output: pathlib.Path | None = None,
 ) -> pathlib.Path:
     url = httpx.URL(url)
-    logger.info("Downloading sdccc from %s.", url)
-    with tempfile.NamedTemporaryFile("wb", suffix=".zip", delete=False) as temporary_file:
+    logger.info('Downloading sdccc from %s.', url)
+    with tempfile.NamedTemporaryFile('wb', suffix='.zip', delete=False) as temporary_file:
         await _download_to_stream_async(url, temporary_file, proxy=proxy, timeout=timeout)  # type: ignore[arg-type]
     output = output or _runner.DEFAULT_STORAGE_DIRECTORY
-    logger.info("Extracting sdccc to %s.", output)
+    logger.info('Extracting sdccc to %s.', output)
     with zipfile.ZipFile(temporary_file.name) as f:
         f.extractall(output)
     return _runner.get_exe_path(output)
