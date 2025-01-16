@@ -56,23 +56,22 @@ Usage
 """
 
 import asyncio
-import io
 import logging
 import pathlib
 import subprocess
-import threading
 import typing
 
 import toml
 
+from pysdccc import _common
 from pysdccc._result_parser import TestSuite
 
-DIRECT_TEST_RESULT_FILE_NAME = "TEST-SDCcc_direct.xml"
-INVARIANT_TEST_RESULT_FILE_NAME = "TEST-SDCcc_invariant.xml"
-DEFAULT_STORAGE_DIRECTORY = pathlib.Path(__file__).parent.joinpath("_sdccc")
+DIRECT_TEST_RESULT_FILE_NAME = 'TEST-SDCcc_direct.xml'
+INVARIANT_TEST_RESULT_FILE_NAME = 'TEST-SDCcc_invariant.xml'
+DEFAULT_STORAGE_DIRECTORY = pathlib.Path(__file__).parent.joinpath('_sdccc')
 """Default directory to store the downloaded sdccc versions."""
 
-logger = logging.getLogger("pysdccc")
+logger = logging.getLogger('pysdccc')
 
 
 def get_exe_path(local_path: pathlib.Path) -> pathlib.Path:
@@ -86,9 +85,9 @@ def get_exe_path(local_path: pathlib.Path) -> pathlib.Path:
     :return: The path to the SDCcc executable file.
     :raises FileNotFoundError: If no executable file or more than one executable file is found in the specified path.
     """
-    files = [f for f in local_path.glob("*.exe") if f.is_file()]
+    files = [f for f in local_path.glob('*.exe') if f.is_file()]
     if not len(files) == 1:
-        raise FileNotFoundError(f"Unable to determine correct executable file, got {files} in path {local_path}")
+        raise FileNotFoundError(f'Unable to determine correct executable file, got {files} in path {local_path}')
     return files[0]
 
 
@@ -128,74 +127,6 @@ def check_requirements(provided: dict[str, dict[str, bool]], available: dict[str
                 raise KeyError(f'Requirement id "{standard}.{req}" not found')
 
 
-def _log_pipe(pipe: io.TextIOWrapper, log_method: typing.Callable[[str], None]) -> None:
-    """Log the pipe of the rbt process.
-
-    :param pipe: The pipe of the rbt process.
-    :param log_method: The logging method to use for logging the pipe output.
-    """
-    try:
-        with pipe:
-            for line in iter(pipe.readline, b""):  # b'\n'-separated lines
-                log_method(line.rstrip())
-    except ValueError:
-        pass  # pipe closed
-
-
-def _run_sdccc(exe_path: pathlib.Path, args: str, timeout: float | None) -> int:
-    """Run the SDCcc executable using the specified configurations.
-
-    This function executes the SDCcc executable with the provided command line arguments and configurations.
-    It logs the stdout and stderr of the process and waits for the process to complete or timeout.
-
-    :param exe_path: The path to the SDCcc executable.
-    :param timeout: The timeout in seconds for the SDCcc process. If None, wait indefinitely.
-    :param args: Arguments formatted as a string.
-    :return: The exit code of the SDCcc process.
-    """
-    logger.info('Executing "%s %s"', exe_path, args)
-    with subprocess.Popen(  # noqa: S603
-        f"{exe_path} {args}",
-        cwd=exe_path.parent,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        bufsize=0,
-        encoding="utf-8",
-    ) as proc:
-        std_out_logger = threading.Thread(target=_log_pipe, args=(proc.stdout, logger.info), daemon=True)
-        std_err_logger = threading.Thread(target=_log_pipe, args=(proc.stderr, logger.error), daemon=True)
-        std_out_logger.start()
-        std_err_logger.start()
-        try:
-            proc.wait(timeout=timeout)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-        finally:
-            # close pipe manually to avoid console spam
-            if proc.stdout:
-                proc.stdout.close()
-            if proc.stderr:
-                proc.stderr.close()
-    std_out_logger.join(1)
-    std_err_logger.join(1)
-    return proc.returncode
-
-
-def parse_results(test_artifacts_directory: pathlib.Path) -> tuple[TestSuite, TestSuite]:
-    """Parse result files from the given path.
-
-    This function reads the direct and invariant test result files from the specified directory
-    and returns them as `TestSuite` objects.
-
-    :param test_artifacts_directory: The path to the directory containing the test result files.
-    :return: A tuple containing the parsed direct and invariant test results as `TestSuite` objects.
-    """
-    return (
-        TestSuite.from_file(test_artifacts_directory.joinpath(DIRECT_TEST_RESULT_FILE_NAME)),
-        TestSuite.from_file(test_artifacts_directory.joinpath(INVARIANT_TEST_RESULT_FILE_NAME)),
-    )
-
-
 class _BaseRunner:
     """Runner for the SDCcc tests.
 
@@ -203,7 +134,7 @@ class _BaseRunner:
     and execution of the SDCcc executable, as well as parsing the test results.
     """
 
-    def __init__(self, test_run_dir: pathlib.Path, exe: pathlib.Path | None = None):
+    def __init__(self, test_run_dir: _common.PATH_TYPE, exe: _common.PATH_TYPE | None = None):
         """Initialize the SdcccRunner object.
 
         :param exe: The path to the SDCcc executable. Must be an absolute path.
@@ -211,18 +142,18 @@ class _BaseRunner:
         :raises ValueError: If the provided paths are not absolute.
         """
         try:
-            self.exe = exe or get_exe_path(DEFAULT_STORAGE_DIRECTORY).absolute()
+            self.exe = pathlib.Path(exe) if exe is not None else get_exe_path(DEFAULT_STORAGE_DIRECTORY).absolute()
         except FileNotFoundError as e:
-            raise FileNotFoundError("Have you downloaded sdccc?") from e
+            raise FileNotFoundError('Have you downloaded sdccc?') from e
         if not self.exe.is_absolute():
-            raise ValueError("Path to executable must be absolute")
+            raise ValueError('Path to executable must be absolute')
         if not self.exe.is_file():
-            raise FileNotFoundError(f"No executable found under {self.exe}")
-        if not test_run_dir.is_absolute():
-            raise ValueError("Path to test run directory must be absolute")
-        if not test_run_dir.is_dir():
-            raise ValueError("Test run directory is not a directory")
-        self.test_run_dir = test_run_dir
+            raise FileNotFoundError(f'No executable found under {self.exe}')
+        self.test_run_dir = pathlib.Path(test_run_dir)
+        if not self.test_run_dir.is_absolute():
+            raise ValueError('Path to test run directory must be absolute')
+        if not self.test_run_dir.is_dir():
+            raise ValueError('Test run directory is not a directory')
 
     def get_config(self) -> dict[str, typing.Any]:
         """Get the default configuration.
@@ -231,7 +162,7 @@ class _BaseRunner:
 
         :return: A dictionary containing the configuration data.
         """
-        return _load_configuration(self.exe.parent.joinpath("configuration").joinpath("config.toml"))
+        return _load_configuration(self.exe.parent.joinpath('configuration').joinpath('config.toml'))
 
     def get_requirements(self) -> dict[str, dict[str, bool]]:
         """Get the default requirements.
@@ -240,7 +171,7 @@ class _BaseRunner:
 
         :return: A dictionary containing the requirements data.
         """
-        return _load_configuration(self.exe.parent.joinpath("configuration").joinpath("test_configuration.toml"))
+        return _load_configuration(self.exe.parent.joinpath('configuration').joinpath('test_configuration.toml'))
 
     def get_test_parameter(self) -> dict[str, typing.Any]:
         """Get the default test parameter.
@@ -249,7 +180,7 @@ class _BaseRunner:
 
         :return: A dictionary containing the test parameter data.
         """
-        return _load_configuration(self.exe.parent.joinpath("configuration").joinpath("test_parameter.toml"))
+        return _load_configuration(self.exe.parent.joinpath('configuration').joinpath('test_parameter.toml'))
 
     def check_requirements(self, path: pathlib.Path) -> None:
         """Check the requirements from the given file against the requirements provided by the SDCcc version.
@@ -264,7 +195,7 @@ class _BaseRunner:
         user_provided_requirements = toml.load(path)
         check_requirements(user_provided_requirements, sdccc_provided_requirements)
 
-    def get_result(self) -> tuple[TestSuite, TestSuite]:
+    def _get_result(self, file_name: str) -> TestSuite | None:
         """Get the parsed results of the test run.
 
         This method reads the direct and invariant test result files from the test run directory and returns them
@@ -272,19 +203,26 @@ class _BaseRunner:
 
         :return: A tuple containing the parsed direct and invariant test results as TestSuite objects.
         """
-        return parse_results(self.test_run_dir)
+        try:
+            return TestSuite.from_file(self.test_run_dir.joinpath(file_name))
+        except FileNotFoundError:
+            return None
 
-    def _prepare_execution_command(self, config: pathlib.Path, requirements: pathlib.Path, **kwargs: typing.Any) -> str:
+    def _prepare_command(
+        self, *args: str, config: pathlib.Path, requirements: pathlib.Path, **kwargs: typing.Any
+    ) -> str:
         if not config.is_absolute():
-            raise ValueError("Path to config file must be absolute")
+            raise ValueError('Path to config file must be absolute')
         if not requirements.is_absolute():
-            raise ValueError("Path to requirements file must be absolute")
+            raise ValueError('Path to requirements file must be absolute')
+        if list(self.test_run_dir.iterdir()):
+            raise ValueError(f'{self.test_run_dir} is not empty')
 
-        kwargs["no_subdirectories"] = "true"
-        kwargs["test_run_directory"] = self.test_run_dir
-        kwargs["config"] = config
-        kwargs["testconfig"] = requirements
-        return " ".join(f"--{arg} {value}" for arg, value in kwargs.items())
+        kwargs['no_subdirectories'] = 'true'
+        kwargs['test_run_directory'] = self.test_run_dir
+        kwargs['config'] = config
+        kwargs['testconfig'] = requirements
+        return _common.build_command(*args, **kwargs)
 
 
 class SdcccRunner(_BaseRunner):
@@ -292,11 +230,12 @@ class SdcccRunner(_BaseRunner):
 
     def run(
         self,
-        config: pathlib.Path,
-        requirements: pathlib.Path,
+        *,
+        config: _common.PATH_TYPE,
+        requirements: _common.PATH_TYPE,
         timeout: float | None = None,
         **kwargs: typing.Any,
-    ) -> int:
+    ) -> tuple[int, TestSuite | None, TestSuite | None]:
         """Run the SDCcc executable using the specified configuration and requirements.
 
         This method executes the SDCcc executable with the provided configuration and requirements files,
@@ -308,16 +247,27 @@ class SdcccRunner(_BaseRunner):
         :param requirements: The path to the requirements file. Must be an absolute path.
         :param timeout: The timeout in seconds for the SDCcc process. If None, wait indefinitely.
         :param kwargs: Additional command line arguments to be passed to the SDCcc executable.
-        :return: The exit code of the SDCcc process.
+        :return: A tuple containing the returncode of the sdccc process, parsed direct and invariant test results as TestSuite objects.
         :raises ValueError: If the provided paths are not absolute.
+        :raises subprocess.TimeoutExpired: If the process is running longer than the timeout.
         """
-        args = self._prepare_execution_command(config, requirements, **kwargs)
-        return _run_sdccc(self.exe, args=args, timeout=timeout)
+        command = self._prepare_command(
+            str(self.exe), config=pathlib.Path(config), requirements=pathlib.Path(requirements), **kwargs
+        )
+        try:
+            return_code = subprocess.run(command, timeout=timeout, check=True, cwd=self.exe.parent).returncode  # noqa: S603
+        except subprocess.CalledProcessError as e:
+            return_code = e.returncode
+        return (
+            return_code,
+            self._get_result(DIRECT_TEST_RESULT_FILE_NAME),
+            self._get_result(INVARIANT_TEST_RESULT_FILE_NAME),
+        )
 
     def get_version(self) -> str:
         """Get the version of the SDCcc executable."""
         # use capture_output = True to get stdout and stderr instead of check_output which only collects stdout
-        process = subprocess.run([str(self.exe), "--version"], check=True, capture_output=True, cwd=self.exe.parent)  # noqa: S603
+        process = subprocess.run([str(self.exe), '--version'], check=True, capture_output=True, cwd=self.exe.parent)  # noqa: S603
         return process.stdout.decode().strip()
 
 
@@ -330,11 +280,11 @@ class _SdcccSubprocessProtocol(asyncio.SubprocessProtocol):
 
     def pipe_data_received(self, fd: int, data: bytes):
         if fd == self._STDOUT:
-            logger.info(data.decode("utf-8").rstrip())
+            logger.info(data.decode(_common.ENCODING).rstrip())
         elif fd == self._STDERR:
-            logger.error(data.decode("utf-8").rstrip())
+            logger.error(data.decode(_common.ENCODING).rstrip())
         else:
-            raise RuntimeError(f"Unexpected file descriptor {fd}")
+            raise RuntimeError(f'Unexpected file descriptor {fd}')
 
     def connection_lost(self, exc: Exception | None):
         self.closed_event.set()
@@ -347,12 +297,13 @@ class SdcccRunnerAsync(_BaseRunner):
 
     async def run(
         self,
-        config: pathlib.Path,
-        requirements: pathlib.Path,
+        *,
+        config: _common.PATH_TYPE,
+        requirements: _common.PATH_TYPE,
         timeout: float | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
         **kwargs: typing.Any,
-    ) -> int:
+    ) -> tuple[int, TestSuite | None, TestSuite | None]:
         """Run the SDCcc executable using the specified configuration and requirements.
 
         This method executes the SDCcc executable with the provided configuration and requirements files,
@@ -365,11 +316,11 @@ class SdcccRunnerAsync(_BaseRunner):
         :param timeout: The timeout in seconds for the SDCcc process. If None, wait indefinitely.
         :param loop: The event loop to run the SDCcc process in. If None, the current running loop is used.
         :param kwargs: Additional command line arguments to be passed to the SDCcc executable.
-        :return: The exit code of the SDCcc process.
+        :return: A tuple containing the returncode of the sdccc process, parsed direct and invariant test results as TestSuite objects.
         :raises ValueError: If the provided paths are not absolute.
+        :raises TimeoutError: If the process is running longer than the timeout.
         """
-        args = self._prepare_execution_command(config, requirements, **kwargs)
-        logger.info('Executing "%s %s"', self.exe, args)
+        args = self._prepare_command(config=pathlib.Path(config), requirements=pathlib.Path(requirements), **kwargs)
         loop = loop or asyncio.get_running_loop()
         transport, protocol = await loop.subprocess_exec(
             _SdcccSubprocessProtocol,
@@ -382,27 +333,32 @@ class SdcccRunnerAsync(_BaseRunner):
             await asyncio.wait_for(protocol.closed_event.wait(), timeout=timeout)
         except TimeoutError:
             transport.kill()
+            raise
         finally:
             transport.close()
         await protocol.closed_event.wait()
         return_code = transport.get_returncode()
         if return_code is None:
-            raise RuntimeError("Process did not exit")
-        return return_code
+            raise RuntimeError('Process did not exit')
+        return (
+            return_code,
+            self._get_result(DIRECT_TEST_RESULT_FILE_NAME),
+            self._get_result(INVARIANT_TEST_RESULT_FILE_NAME),
+        )
 
     async def get_version(self) -> str | None:
         """Get the version of the SDCcc executable."""
         process = await asyncio.create_subprocess_exec(
             self.exe,
-            "--version",
+            '--version',
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             cwd=self.exe.parent,
         )
         stdout, stderr = await process.communicate()
         if process.returncode:
-            error = subprocess.CalledProcessError(process.returncode, f"{self.exe} --version")
+            error = subprocess.CalledProcessError(process.returncode, f'{self.exe} --version')
             error.stdout = stdout
             error.stderr = stderr
             raise error
-        return stdout.decode("utf-8").strip() if stdout else None
+        return stdout.decode(_common.ENCODING).strip() if stdout else None

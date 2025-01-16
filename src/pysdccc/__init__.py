@@ -7,7 +7,6 @@ from pysdccc._runner import (
     SdcccRunner,
     SdcccRunnerAsync,
     check_requirements,
-    parse_results,
 )
 
 __version__ = "0.0.0"

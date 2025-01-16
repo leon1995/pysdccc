@@ -1,8 +1,10 @@
+from wsgiref.util import request_uri
+
 # pysdccc
 
 This python packages provides a convenient way to execute the [sdccc test suite](https://github.com/Draegerwerk/sdccc/).
 
-This wrapper is only compatible with sdccc versions based on the commit [ebe0e09](https://github.com/Draegerwerk/SDCcc/commit/ebe0e094ff92649d0bda1988b0d1c1b08403aea4) or later.
+This wrapper is only compatible with sdccc versions later than [ebe0e09](https://github.com/Draegerwerk/SDCcc/commit/ebe0e094ff92649d0bda1988b0d1c1b08403aea4).
 
 ## Installation
 
@@ -20,6 +22,7 @@ For this open source project the [Contributor License Agreement](Contributor_Lic
 ### Basic usage
 
 ```python
+import subprocess
 import pathlib
 
 import pysdccc
@@ -33,13 +36,19 @@ def main():
         pathlib.Path("/path/to/sdccc/result/directory"),
     )
 
-    exit_code = runner.run(  # https://github.com/Draegerwerk/SDCcc/?tab=readme-ov-file#exit-codes
-        pathlib.Path("/path/to/configuration/file.toml"),
-        pathlib.Path("/path/to/requirements/file.toml"),
-    )
+    try:
+        runner.run(
+            config=pathlib.Path("/path/to/configuration/file.toml"),
+            requirements=pathlib.Path("/path/to/requirements/file.toml"),
+        )
+    except subprocess.TimeoutExpired:
+        print("Timeout occurred")
+        return
+    except subprocess.CalledProcessError as e:
+        return_code = e.returncode  # https://github.com/Draegerwerk/SDCcc/?tab=readme-ov-file#exit-codes
 
     try:
-        direct_result, invariant_results = runner.get_result()
+        direct_result, invariant_results = runner._get_result()
     except FileNotFoundError:
         print("No results available")
     else:
@@ -50,6 +59,7 @@ def main():
 If you look for an async version
 ```python
 import pathlib
+import subprocess
 
 import pysdccc
 
@@ -62,10 +72,17 @@ async def main():
         pathlib.Path("/path/to/sdccc/result/directory"),
     )
 
-    exit_code = await runner.run(  # https://github.com/Draegerwerk/SDCcc/?tab=readme-ov-file#exit-codes
-        pathlib.Path("/path/to/configuration/file.toml"),
-        pathlib.Path("/path/to/requirements/file.toml"),
-    )
+    try:
+        await runner.run(
+            config=pathlib.Path("/path/to/configuration/file.toml"),
+            requirements = pathlib.Path("/path/to/requirements/file.toml"),
+        )
+    except TimeoutError:
+        print("Timeout occurred")
+        return
+    except subprocess.CalledProcessError as e:
+        return_code = e.returncode  # https://github.com/Draegerwerk/SDCcc/?tab=readme-ov-file#exit-codes
+
     
     # continue ...
 ```
@@ -96,8 +113,8 @@ runner = pysdccc.SdcccRunner(
 )
 
 runner.run(
-    config_path,
-    pathlib.Path('/path/to/requirements/file.toml'),
+    config=config_path,
+    requirements=pathlib.Path('/path/to/requirements/file.toml'),
 )
 
 # or if you have already downloaded the version

@@ -128,6 +128,12 @@ line-length = 120  # https://docs.astral.sh/ruff/settings/#line-length
 # Allow imports relative to the "src" and "test" directories.
 src = ["src", "tests"]  # https://docs.astral.sh/ruff/settings/#src
 
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.ruff.lint.flake8-quotes]
+inline-quotes = "single"
+
 [tool.ruff.lint.flake8-annotations]
 allow-star-arg-any = true # https://docs.astral.sh/ruff/settings/#allow-star-arg-any
 suppress-none-returning = true # https://docs.astral.sh/ruff/settings/#suppress-none-returning
