@@ -78,8 +78,8 @@ class TestDescriptionElement(junitparser.Element):
 class TestCase(junitparser.TestCase):
     """Test case containing custom elements.
 
-    This class extends the `junitparser.TestCase` class to include custom elements such as test identifier and test description.
-    It provides properties to access these custom elements.
+    This class extends the `junitparser.TestCase` class to include custom elements such as test identifier and test
+    description. It provides properties to access these custom elements.
     """
 
     @property
@@ -125,5 +125,5 @@ class TestSuite(junitparser.TestSuite):
         """
         suite = junitparser.JUnitXml.fromfile(str(file))
         if not isinstance(suite, junitparser.TestSuite):
-            raise ValueError(f'Expected class {junitparser.TestSuite}, got {type(suite)}')
+            raise TypeError(f'Expected class {junitparser.TestSuite}, got {type(suite)}')
         return cls.fromelem(suite)  # type: ignore[no-untyped-call,no-any-return]

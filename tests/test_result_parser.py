@@ -1,6 +1,7 @@
 """test for module result_parser.py."""
 
 import pathlib
+from typing import Type
 import uuid
 from unittest import mock
 
@@ -73,7 +74,7 @@ def test_test_suite_from_file(mock_fromfile: mock.MagicMock):
     assert suite == mock_suite
 
     mock_fromfile.return_value = JUnitXml()
-    with pytest.raises(ValueError, match=f'Expected class {junitparser.TestSuite}, got {type(JUnitXml())}'):
+    with pytest.raises(TypeError, match=f'Expected class {junitparser.TestSuite}, got {type(JUnitXml())}'):
         TestSuite.from_file('dummy_path')
 
 

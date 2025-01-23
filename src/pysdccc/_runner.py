@@ -50,9 +50,8 @@ import asyncio
 import logging
 import pathlib
 import subprocess
+import tomllib
 import typing
-
-import toml
 
 from pysdccc import _common
 from pysdccc._result_parser import TestSuite
@@ -67,8 +66,8 @@ def get_exe_path(local_path: pathlib.Path) -> pathlib.Path:
     """Get the path to the SDCcc executable.
 
     This function searches the specified local path for the SDCcc executable file. It expects exactly one executable
-    file matching the pattern "sdccc-*.exe" to be present in the directory. If no such file or more than one file is found,
-    a FileNotFoundError is raised.
+    file matching the pattern "sdccc-*.exe" to be present in the directory. If no such file or more than one file is
+    found, a FileNotFoundError is raised.
 
     :param local_path: The local path where the SDCcc executable is expected to be found.
     :return: The path to the SDCcc executable file.
@@ -88,7 +87,7 @@ def _load_configuration(path: pathlib.Path) -> dict[str, typing.Any]:
     :param path: The path to the directory containing the configuration file.
     :return: A dictionary containing the configuration data.
     """
-    return dict(toml.load(path))
+    return dict(tomllib.loads(path.read_text()))
 
 
 def check_requirements(provided: dict[str, dict[str, bool]], available: dict[str, dict[str, bool]]) -> None:
@@ -127,7 +126,8 @@ class _BaseRunner:
         """Initialize the SdcccRunner object.
 
         :param exe: The path to the SDCcc executable. Must be an absolute path.
-        :param test_run_dir: The path to the directory where the test run results are to be stored. Must be an absolute path.
+        :param test_run_dir: The path to the directory where the test run results are to be stored. Must be an absolute
+        path.
         :raises ValueError: If the provided paths are not absolute.
         """
         try:
@@ -178,10 +178,11 @@ class _BaseRunner:
         requirements provided by the SDCcc version. If any requirement is not found, a KeyError is raised.
 
         :param path: The path to the user's requirements file.
-        :raises KeyError: If a standard or requirement provided by the user is not found in the SDCcc provided requirements.
+        :raises KeyError: If a standard or requirement provided by the user is not found in the SDCcc provided
+        requirements.
         """
         sdccc_provided_requirements = self.get_requirements()
-        user_provided_requirements = toml.load(path)
+        user_provided_requirements = tomllib.loads(path.read_text())
         check_requirements(user_provided_requirements, sdccc_provided_requirements)
 
     def _get_result(self, file_name: str) -> TestSuite | None:
@@ -192,14 +193,18 @@ class _BaseRunner:
 
         :return: A tuple containing the parsed direct and invariant test results as TestSuite objects.
         """
-        try:
-            return TestSuite.from_file(self.test_run_dir.joinpath(file_name))
-        except FileNotFoundError:
+        test_result_dir = self.test_run_dir.joinpath(file_name)
+        if not test_result_dir.exists():
             return None
+        return TestSuite.from_file(test_result_dir)
 
     def _prepare_command(
-        self, *args: str, config: pathlib.Path, requirements: pathlib.Path, **kwargs: typing.Any,
-    ) -> str:
+        self,
+        *args: str,
+        config: pathlib.Path,
+        requirements: pathlib.Path,
+        **kwargs: typing.Any,
+    ) -> list[str]:
         if not config.is_absolute():
             raise ValueError('Path to config file must be absolute')
         if not requirements.is_absolute():
@@ -236,12 +241,16 @@ class SdcccRunner(_BaseRunner):
         :param requirements: The path to the requirements file. Must be an absolute path.
         :param timeout: The timeout in seconds for the SDCcc process. If None, wait indefinitely.
         :param kwargs: Additional command line arguments to be passed to the SDCcc executable.
-        :return: A tuple containing the returncode of the sdccc process, parsed direct and invariant test results as TestSuite objects.
+        :return: A tuple containing the returncode of the sdccc process, parsed direct and invariant test results as
+        TestSuite objects.
         :raises ValueError: If the provided paths are not absolute.
         :raises subprocess.TimeoutExpired: If the process is running longer than the timeout.
         """
         command = self._prepare_command(
-            str(self.exe), config=pathlib.Path(config), requirements=pathlib.Path(requirements), **kwargs,
+            str(self.exe),
+            config=pathlib.Path(config),
+            requirements=pathlib.Path(requirements),
+            **kwargs,
         )
         try:
             return_code = subprocess.run(command, timeout=timeout, check=True, cwd=self.exe.parent).returncode  # noqa: S603
@@ -290,7 +299,7 @@ class SdcccRunnerAsync(_BaseRunner):
         *,
         config: _common.PATH_TYPE,
         requirements: _common.PATH_TYPE,
-        timeout: float | None = None,
+        timeout: float | None = None,  # noqa: ASYNC109
         loop: asyncio.AbstractEventLoop | None = None,
         **kwargs: typing.Any,
     ) -> tuple[int, TestSuite | None, TestSuite | None]:
@@ -306,7 +315,8 @@ class SdcccRunnerAsync(_BaseRunner):
         :param timeout: The timeout in seconds for the SDCcc process. If None, wait indefinitely.
         :param loop: The event loop to run the SDCcc process in. If None, the current running loop is used.
         :param kwargs: Additional command line arguments to be passed to the SDCcc executable.
-        :return: A tuple containing the returncode of the sdccc process, parsed direct and invariant test results as TestSuite objects.
+        :return: A tuple containing the returncode of the sdccc process, parsed direct and invariant test results as
+        TestSuite objects.
         :raises ValueError: If the provided paths are not absolute.
         :raises TimeoutError: If the process is running longer than the timeout.
         """
@@ -315,12 +325,13 @@ class SdcccRunnerAsync(_BaseRunner):
         transport, protocol = await loop.subprocess_exec(
             _SdcccSubprocessProtocol,
             self.exe,
-            args,
+            *args,
             stdin=None,
             cwd=self.exe.parent,
         )
         try:
-            await asyncio.wait_for(protocol.closed_event.wait(), timeout=timeout)
+            async with asyncio.timeout(timeout):
+                await protocol.closed_event.wait()
         except TimeoutError:
             transport.kill()
             raise
@@ -352,18 +363,3 @@ class SdcccRunnerAsync(_BaseRunner):
             error.stderr = stderr
             raise error
         return stdout.decode(_common.ENCODING).strip() if stdout else None
-
-async def main():
-    import tempfile
-    handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter('%(message)s'))
-    logger = logging.getLogger('pysdccc')
-    logger.addHandler(handler)
-    logger.level = logging.DEBUG
-    with tempfile.TemporaryDirectory() as dir:
-        runner = SdcccRunnerAsync(pathlib.Path(dir).absolute())
-        print(await runner.run(config=pathlib.Path().absolute(), requirements=pathlib.Path().absolute()))
-
-if __name__ == '__main__':
-    import asyncio
-    asyncio.run(main())

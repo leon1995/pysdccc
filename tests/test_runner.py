@@ -35,7 +35,7 @@ def test_get_exe_path():
 
 def test_load_configuration():
     """Test that the configuration is correctly loaded from a TOML file."""
-    with mock.patch('toml.load') as mock_load:
+    with mock.patch('pathlib.Path.read_text'), mock.patch('tomllib.loads') as mock_load:
         mock_load.return_value = {'key': 'value'}
         assert _load_configuration(pathlib.Path('config.toml')) == {'key': 'value'}
 
@@ -116,7 +116,8 @@ def test_sdccc_runner_check_requirements():
 def test_configuration():
     """Test that the SdcccRunner correctly loads the configuration from the SDCcc executable's directory."""
     run = _BaseRunner(
-        pathlib.Path().absolute(), pathlib.Path(__file__).parent.joinpath('testversion/sdccc.exe').absolute(),
+        pathlib.Path().absolute(),
+        pathlib.Path(__file__).parent.joinpath('testversion/sdccc.exe').absolute(),
     )
     loaded_config = run.get_config()
     provided_config = """
@@ -173,7 +174,8 @@ Biceps547TimeInterval=5
 def test_requirements():
     """Test that the SdcccRunner correctly loads the requirements from the SDCcc executable's directory."""
     run = SdcccRunner(
-        pathlib.Path().absolute(), pathlib.Path(__file__).parent.joinpath('testversion/sdccc.exe').absolute(),
+        pathlib.Path().absolute(),
+        pathlib.Path(__file__).parent.joinpath('testversion/sdccc.exe').absolute(),
     )
     loaded_config = run.get_requirements()
     provided_config = """

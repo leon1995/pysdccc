@@ -89,7 +89,9 @@ def cli():
 def install(url: httpx.URL, proxy: httpx.Proxy | None):
     """Download the specified version from the default URL to a temporary directory.
 
-    This function downloads the SDCcc executable from the given URL to a temporary directory. It optionally uses a proxy and a specified timeout for the download operation. The downloaded file is extracted to a local path determined by the version string in the URL.
+    This function downloads the SDCcc executable from the given URL to a temporary directory.
+    It optionally uses a proxy and a specified timeout for the download operation.
+    The downloaded file is extracted to a local path determined by the version string in the URL.
 
     :param url: The parsed URL from which to download the executable.
     :param proxy: Optional proxy to be used for the download.

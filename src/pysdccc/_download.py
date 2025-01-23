@@ -27,20 +27,19 @@ def _download_to_stream(
 def download(
     url: httpx.URL | str,
     proxy: httpx.Proxy | None = None,
-    timeout: float | None = None,
     output: pathlib.Path | None = None,
 ) -> pathlib.Path:
-    """Download the specified version from the default URL to the specified `output` directory or the `runner.DEFAULT_STORAGE_DIRECTORY`.
+    """Download the specified version from the URL.
 
     :param url: The parsed URL from which to download the executable.
     :param proxy: Optional proxy to be used for the download.
-    :param timeout: The timeout in seconds for the download operation.
-    :param output: The path to the directory where the downloaded executable will be extracted. If None, the default storage directory is used.
+    :param output: The path to the directory where the downloaded executable will be extracted. If None,
+    `DEFAULT_STORAGE_DIRECTORY` is used.
     """
     url = httpx.URL(url)
     logger.info('Downloading sdccc from %s.', url)
     with tempfile.NamedTemporaryFile('wb', suffix='.zip', delete=False) as temporary_file:
-        _download_to_stream(url, temporary_file, proxy=proxy, timeout=timeout)  # type: ignore[arg-type]
+        _download_to_stream(url, temporary_file, proxy=proxy)  # type: ignore[arg-type]
     output = output or _runner.DEFAULT_STORAGE_DIRECTORY
     logger.info('Extracting sdccc to %s.', output)
     with zipfile.ZipFile(temporary_file.name) as f:
@@ -65,10 +64,9 @@ async def _download_to_stream_async(
     url: httpx.URL,
     stream: io.IOBase,
     proxy: httpx.Proxy | None = None,
-    timeout: float | None = None,
 ) -> None:
     client = httpx.AsyncClient(follow_redirects=True, proxy=proxy)
-    async with client.stream('GET', url, timeout=timeout) as response:
+    async with client.stream('GET', url) as response:
         response.raise_for_status()
         async for chunk in response.aiter_bytes():
             stream.write(chunk)
@@ -77,13 +75,12 @@ async def _download_to_stream_async(
 async def download_async(
     url: httpx.URL | str,
     proxy: httpx.Proxy | None = None,
-    timeout: float | None = None,
     output: pathlib.Path | None = None,
 ) -> pathlib.Path:
     url = httpx.URL(url)
     logger.info('Downloading sdccc from %s.', url)
     with tempfile.NamedTemporaryFile('wb', suffix='.zip', delete=False) as temporary_file:
-        await _download_to_stream_async(url, temporary_file, proxy=proxy, timeout=timeout)  # type: ignore[arg-type]
+        await _download_to_stream_async(url, temporary_file, proxy=proxy)  # type: ignore[arg-type]
     output = output or _runner.DEFAULT_STORAGE_DIRECTORY
     logger.info('Extracting sdccc to %s.', output)
     with zipfile.ZipFile(temporary_file.name) as f:
