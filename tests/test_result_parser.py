@@ -1,7 +1,6 @@
 """test for module result_parser.py."""
 
 import pathlib
-from typing import Type
 import uuid
 from unittest import mock
 
