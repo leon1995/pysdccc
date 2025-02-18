@@ -1,5 +1,3 @@
-from wsgiref.util import request_uri
-
 # pysdccc
 
 This python packages provides a convenient way to execute the [sdccc test suite](https://github.com/Draegerwerk/sdccc/).
