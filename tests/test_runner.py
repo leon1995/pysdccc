@@ -3,11 +3,11 @@
 import asyncio
 import pathlib
 import subprocess
+import tomllib
 import uuid
 from unittest import mock
 
 import pytest
-import toml
 
 from pysdccc._result_parser import TestSuite
 from pysdccc._runner import (
@@ -168,7 +168,7 @@ ServerAddress="localhost:50051"
 [SDCcc.TestParameter]
 Biceps547TimeInterval=5
     """
-    assert toml.loads(provided_config) == loaded_config
+    assert tomllib.loads(provided_config) == loaded_config
 
 
 def test_requirements():
@@ -282,7 +282,7 @@ R0072=false
 R0078_0=true
 R0080=true
     """
-    assert toml.loads(provided_config) == loaded_config
+    assert tomllib.loads(provided_config) == loaded_config
 
 
 def test_parse_result():

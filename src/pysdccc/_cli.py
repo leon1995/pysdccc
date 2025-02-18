@@ -20,11 +20,11 @@ except ImportError as import_error:
 class UrlType(click.ParamType):
     name = 'url'
 
-    def convert(self, value: str, param: Any, ctx: Any) -> httpx.URL:
+    def convert(self, value: str, param: click.Parameter | None, ctx: click.Context | None) -> httpx.URL:
         try:
             return httpx.URL(value)
         except Exception as e:  # noqa: BLE001
-            self.fail(f'{value!r} is not a valid proxy: {e}', param, ctx)
+            self.fail(f'{value!r} is not a valid url: {e}', param, ctx)
 
 
 URL = UrlType()

@@ -38,7 +38,7 @@ test = [
 ]
 dev = [
     { include-group = "test" },
-    "ruff>=0.8.2",
+    "ruff>=0.9.6",
     "pyright",
     "lxml-stubs",
     "types-toml",
@@ -53,8 +53,11 @@ cli = [
     "click>=8.0",
 ]
 
-[tool.hatch.build.targets.sdist]
+[tool.hatch.build.targets.wheel]  # https://github.com/astral-sh/uv/issues/11557#issuecomment-2661521666
 packages = ["src/pysdccc"]
+
+[tool.hatch.build.targets.sdist]  # https://github.com/astral-sh/uv/issues/11557#issuecomment-2661521666
+only-include = ["src"]
 
 [tool.hatch.version]
 path = "src/pysdccc/__init__.py"
