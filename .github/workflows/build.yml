@@ -17,7 +17,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Install dependencies
-        run: uv sync --dev --all-extras --locked
+        run: uv sync --dev --all-extras --frozen
 
       - uses: astral-sh/ruff-action@v3
       - run: ruff check
@@ -96,7 +96,7 @@ jobs:
         run: uv pip install ${{ matrix.distribution }}
 
       - name: Install test dependencies
-        run: uv sync --group test --locked
+        run: uv sync --group test --frozen
 
       - name: Detect suffix on ubuntu
         if: ${{ matrix.os == 'ubuntu-latest' }}
