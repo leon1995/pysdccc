@@ -251,24 +251,24 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "click", marker = "extra == 'cli'", specifier = ">=8.0" },
-    { name = "httpx" },
+    { name = "httpx", specifier = ">=0.28.0" },
     { name = "junitparser", specifier = ">=3.1.2" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "lxml-stubs" },
-    { name = "pyright" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-html" },
+    { name = "lxml-stubs", specifier = ">=0.5.1" },
+    { name = "pyright", specifier = ">=1.1.390" },
+    { name = "pytest", specifier = ">=8" },
+    { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "pytest-html", specifier = ">=4" },
     { name = "ruff", specifier = ">=0.9.6" },
-    { name = "types-toml" },
+    { name = "types-toml", specifier = ">=0.10.8" },
 ]
 test = [
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-html" },
+    { name = "pytest", specifier = ">=8" },
+    { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "pytest-html", specifier = ">=4" },
 ]
 
 [[package]]

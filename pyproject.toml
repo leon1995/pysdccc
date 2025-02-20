@@ -12,7 +12,7 @@ description = "Python wrapper for sdccc test tool"
 requires-python = ">=3.11, <3.14"
 dependencies = [
     "junitparser>=3.1.2",
-    "httpx",
+    "httpx>=0.28.0",
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -32,16 +32,16 @@ keywords = ["sdc", "sdccc", "test", "wrapper"]
 
 [dependency-groups]
 test = [
-    "pytest",
-    "pytest-html",
-    "pytest-asyncio",
+    "pytest>=8",
+    "pytest-html>=4",
+    "pytest-asyncio>=0.24",
 ]
 dev = [
     { include-group = "test" },
     "ruff>=0.9.6",
-    "pyright",
-    "lxml-stubs",
-    "types-toml",
+    "pyright>=1.1.390",
+    "lxml-stubs>=0.5.1",
+    "types-toml>=0.10.8",
 ]
 
 [project.scripts]
