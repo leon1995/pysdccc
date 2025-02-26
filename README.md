@@ -42,7 +42,7 @@ def main():
     except subprocess.TimeoutExpired:
         print("Timeout occurred")
         return
-    
+
     if direct_result is None or invariant_result is None:
         print("No result file available")
         return
@@ -73,7 +73,7 @@ async def main():
     except TimeoutError:
         print("Timeout occurred")
         return
-    
+
     # checkout example from above ...
 ```
 

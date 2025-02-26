@@ -18,7 +18,8 @@ and to license your work accordingly.
 - As we restricted pushing directly to one of pysdccc's branches, you have
   to [create a fork](https://github.com/Draegerwerk/pysdccc/fork) where you can push your changes before creating a
   pull request.
-- Install the package as an editable installation with `pip install -e ".[dev]"`.
+- Install the dependencies, e.g. with `uv sync --dev --all-extras`.
+- Install [tox-uv](https://github.com/tox-dev/tox-uv) if you use [uv](https://docs.astral.sh/uv/) or [tox](https://pypi.org/project/tox/) if you don't
 - Before making any commits, ensure
   you [sign your commits](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits).
 
@@ -101,10 +102,8 @@ Creating a pull request is a critical step in contributing to our project. Here'
 1. **Ensure Your Branch is Up-to-Date**: Before starting, make sure your branch is up-to-date with the branch you're
    planning to merge into.
 
-2. **Check Your Changes**:
-    - Run tests with `pytest` to ensure all tests pass.
-    - Use `ruff check /path/to/your/changes1 /path/to/your/changes2 ...` for static code analysis.
-    - Apply `pyright /path/to/your/changes1 /path/to/your/changes2 ...` for type checking.
+2. **Check Your Changes**: 
+    - Run `tox` to check your changes. Ensure all tests pass and the code is formatted correctly.
 
 3. **Commit Your Changes**: Commit your changes with clear, descriptive commit messages.
 
