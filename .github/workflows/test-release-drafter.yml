@@ -1,0 +1,69 @@
+# THROWAWAY test workflow — run it manually from the Actions tab on your fork to
+# validate the release-drafter setup end to end. Delete this file before merging
+# anything back to the production repo.
+#
+# Suggested testing sequence on the fork:
+#   1. dry_run=true  (defaults)            -> logs the generated notes, changes nothing.
+#   2. publish=true, dry_run=false, tag=v0.0.0-test1, attach_artifacts=true
+#                                          -> promotes the draft into a real (pre)release
+#                                             tagged v0.0.0-test1 and attaches a dummy file,
+#                                             exactly mimicking the Option 3 flow in publish.yml.
+#   3. Delete the test release + tag afterwards.
+name: TEST Release Drafter
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only compute & log the notes; create/modify nothing"
+        type: boolean
+        default: true
+      publish:
+        description: "Publish a real GitHub release (ignored when dry_run is true)"
+        type: boolean
+        default: false
+      tag:
+        description: "Tag to publish the release under"
+        type: string
+        default: "v0.0.0-test1"
+      prerelease:
+        description: "Mark the published release as a prerelease"
+        type: boolean
+        default: true
+      attach_artifacts:
+        description: "Attach a dummy artifact (README.md) like the real release job does"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test release-drafter
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write       # publish the release (no-op in dry-run)
+      pull-requests: read   # release-drafter reads merged PRs to build notes
+    steps:
+      - name: Run release-drafter
+        uses: release-drafter/release-drafter@v7
+        with:
+          config-name: release-drafter.yml
+          dry-run: ${{ inputs.dry_run }}
+          publish: ${{ inputs.publish }}
+          tag: ${{ inputs.tag }}
+          prerelease: ${{ inputs.prerelease }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check out repository
+        if: ${{ inputs.attach_artifacts && !inputs.dry_run }}
+        uses: actions/checkout@v5
+
+      - name: Attach dummy artifact to the release
+        if: ${{ inputs.attach_artifacts && !inputs.dry_run }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag }}
+          files: README.md

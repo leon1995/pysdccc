@@ -46,7 +46,8 @@ jobs:
     needs: upload
     if: needs.upload.outputs.DO_GITHUB_RELEASE == '1'
     permissions:
-      contents: write
+      contents: write       # publish the GitHub release
+      pull-requests: read   # release-drafter reads merged PRs to build notes
 
     steps:
       - name: Check out Git repository
@@ -77,12 +78,20 @@ jobs:
           echo DO_PRERELEASE=$do_prerelease >> $GITHUB_ENV
           echo DO_PRERELEASE=$do_prerelease
 
+      - name: Publish GitHub release from release-drafter draft
+        uses: release-drafter/release-drafter@v7
+        with:
+          config-name: release-drafter.yml
+          publish: true
+          tag: ${{ github.ref_name }}
+          prerelease: ${{ env.DO_PRERELEASE == '1' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Attach artifacts to github release
         uses: softprops/action-gh-release@v3
         with:
+          tag_name: ${{ github.ref_name }}
           files: |
-            CHANGELOG.md
             dist/*
             pytest_reports/test_reports.zip
-          prerelease: ${{ env.DO_PRERELEASE == '1' }}
-          body_path: CHANGELOG.md

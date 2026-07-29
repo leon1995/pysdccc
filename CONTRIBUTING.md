@@ -95,6 +95,30 @@ testing:
 By following these guidelines, you help ensure that our project remains stable, reliable, and easy to maintain. Thank
 you for contributing to our tests!
 
+## Branch naming
+
+We name working branches with a short, lowercase prefix that describes the kind of change,
+followed by a slash and a brief description, e.g. `feat/download-timeout` or `fix/log-parser`.
+The prefix is used to automatically label the pull request and to sort your change into the
+right section of the auto-generated release notes, so please pick the matching one:
+
+| Prefix                                            | Used for                                              | Release notes section |
+|---------------------------------------------------|-------------------------------------------------------|-----------------------|
+| `feat/`, `feature/`                               | New, non-breaking functionality                       | 🚀 Features           |
+| `fix/`, `bugfix/`, `hotfix/`                       | Bug fixes                                              | 🐛 Bug Fixes          |
+| `docs/`                                           | Documentation-only changes                            | 📚 Documentation      |
+| `chore/`, `refactor/`, `test/`, `ci/`, `build/`, `style/` | Maintenance, refactoring, tests, tooling      | 🔧 Maintenance        |
+| `renovate/`, `dependabot/`                        | Dependency updates (created by the bots)              | ⬆️ Dependencies       |
+
+Breaking changes are detected from the pull request title: prefix it with `!`
+(e.g. `feat!: ...`) or include the phrase "breaking change" in the description, and it
+will be labeled `breaking` and listed under 💥 Breaking Changes.
+
+Labels are applied automatically based on the branch name and pull request title, so a
+clear, descriptive title matters. Maintainers can also add or correct labels by hand if
+needed. Release notes are then drafted automatically from these labels — the `CHANGELOG.md`
+file no longer needs to be updated manually.
+
 ## How to create a pull request
 
 Creating a pull request is a critical step in contributing to our project. Here's how to do it effectively:
