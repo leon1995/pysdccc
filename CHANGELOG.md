@@ -5,6 +5,11 @@ All notable changes to the pysdccc module will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+> **Note:** This file is no longer maintained by hand. Release notes are now
+> generated automatically from merged pull requests and published on the
+> [GitHub Releases](https://github.com/Draegerwerk/pysdccc/releases) page.
+> The entries below are kept as a historical record.
+
 ## [Unreleased]
 
 ## [1.1.0] - 2026-03-10

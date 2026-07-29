@@ -1,0 +1,95 @@
+name-template: "v$RESOLVED_VERSION"
+tag-template: "v$RESOLVED_VERSION"
+
+categories:
+  - title: "💥 Breaking Changes"
+    labels:
+      - "breaking"
+  - title: "🚀 Features"
+    labels:
+      - "feature"
+      - "enhancement"
+  - title: "🐛 Bug Fixes"
+    labels:
+      - "fix"
+      - "bug"
+  - title: "⬆️ Dependencies"
+    labels:
+      - "dependencies"
+  - title: "📚 Documentation"
+    labels:
+      - "documentation"
+  - title: "🔧 Maintenance"
+    labels:
+      - "chore"
+      - "refactor"
+
+# $RESOLVED_VERSION is derived from the labels below. It only suggests the next
+# version for the draft's name/tag; the actual release tag (including rc/a/b
+# prerelease suffixes) is still chosen by the maintainer when they push the tag.
+version-resolver:
+  major:
+    labels:
+      - "major"
+      - "breaking"
+  minor:
+    labels:
+      - "feature"
+      - "enhancement"
+  patch:
+    labels:
+      - "fix"
+      - "bug"
+      - "dependencies"
+      - "documentation"
+      - "chore"
+      - "refactor"
+  default: patch
+
+# Labels are applied automatically from branch names and PR titles (see the
+# branch-naming section in CONTRIBUTING.md). Missing labels are created on first
+# use; maintainers may also apply/adjust labels by hand.
+autolabeler:
+  - label: "feature"
+    branch:
+      - '/^feat(ure)?\/.+/'
+    title:
+      - '/^feat(\(.+\))?!?:/i'
+  - label: "fix"
+    branch:
+      - '/^(fix|bugfix|hotfix)\/.+/'
+    title:
+      - '/^fix(\(.+\))?!?:/i'
+  - label: "documentation"
+    branch:
+      - '/^docs?\/.+/'
+    title:
+      - '/^docs(\(.+\))?:/i'
+  - label: "chore"
+    branch:
+      - '/^(chore|refactor|test|ci|build|style)\/.+/'
+    title:
+      - '/^(chore|refactor|test|ci|build|style)(\(.+\))?:/i'
+  - label: "dependencies"
+    branch:
+      - '/^renovate\/.+/'
+      - '/^dependabot\/.+/'
+    title:
+      - '/^\w+\(deps(-dev)?\):/i'
+      - '/update .+ (dependency|to v?\d)/i'
+      - '/bump .+ from .+ to .+/i'
+  - label: "breaking"
+    title:
+      - '/^\w+(\(.+\))?!:/'
+      - '/breaking change/i'
+
+change-template: "- $TITLE (#$NUMBER) @$AUTHOR"
+change-title-escapes: '\<*_&'
+no-changes-template: "- No notable changes"
+
+template: |
+  ## What's Changed
+
+  $CHANGES
+
+  **Full Changelog**: https://github.com/Draegerwerk/pysdccc/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
