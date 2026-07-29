@@ -1,50 +1,53 @@
 name-template: "v$RESOLVED_VERSION"
 tag-template: "v$RESOLVED_VERSION"
 
+# Categories use the unified schema: label matching lives under `when`, and
+# version resolution is expressed via `semver-increment` (the old top-level
+# `version-resolver` block is deprecated). $RESOLVED_VERSION is derived from
+# these increments and only suggests the next version for the draft's name/tag;
+# the actual release tag (including rc/a/b prerelease suffixes) is still chosen
+# by the maintainer when they push the tag. The resolver picks the highest
+# increment across all matching categories.
 categories:
   - title: "💥 Breaking Changes"
-    labels:
-      - "breaking"
+    semver-increment: "major"
+    when:
+      labels:
+        - "breaking"
   - title: "🚀 Features"
-    labels:
-      - "feature"
-      - "enhancement"
+    semver-increment: "minor"
+    when:
+      labels:
+        - "feature"
+        - "enhancement"
   - title: "🐛 Bug Fixes"
-    labels:
-      - "fix"
-      - "bug"
+    # semver-increment defaults to "patch"
+    when:
+      labels:
+        - "fix"
+        - "bug"
   - title: "⬆️ Dependencies"
-    labels:
-      - "dependencies"
+    when:
+      labels:
+        - "dependencies"
   - title: "📚 Documentation"
-    labels:
-      - "documentation"
+    when:
+      labels:
+        - "documentation"
   - title: "🔧 Maintenance"
-    labels:
-      - "chore"
-      - "refactor"
-
-# $RESOLVED_VERSION is derived from the labels below. It only suggests the next
-# version for the draft's name/tag; the actual release tag (including rc/a/b
-# prerelease suffixes) is still chosen by the maintainer when they push the tag.
-version-resolver:
-  major:
-    labels:
-      - "major"
-      - "breaking"
-  minor:
-    labels:
-      - "feature"
-      - "enhancement"
-  patch:
-    labels:
-      - "fix"
-      - "bug"
-      - "dependencies"
-      - "documentation"
-      - "chore"
-      - "refactor"
-  default: patch
+    when:
+      labels:
+        - "chore"
+        - "refactor"
+  # Version-resolver-only entries: they affect $RESOLVED_VERSION but are not
+  # rendered as changelog sections.
+  - type: "version-resolver"
+    semver-increment: "major"
+    when:
+      labels:
+        - "major"
+  - type: "version-resolver"
+    semver-increment: "patch" # fallback default when nothing else matches
 
 # Labels are applied automatically from branch names and PR titles (see the
 # branch-naming section in CONTRIBUTING.md). Missing labels are created on first
