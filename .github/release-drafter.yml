@@ -8,33 +8,45 @@ tag-template: "v$RESOLVED_VERSION"
 # the actual release tag (including rc/a/b prerelease suffixes) is still chosen
 # by the maintainer when they push the tag. The resolver picks the highest
 # increment across all matching categories.
+#
+# `exclusive: true` on every changelog category means a PR is rendered in only
+# the FIRST matching section (categories are evaluated top-to-bottom), so a PR
+# that ends up double-labeled (e.g. `feature` + `chore`) is not listed twice.
+# Exclusivity is per-type, so it does not affect version resolution below — that
+# still takes the highest increment across all matching categories.
 categories:
   - title: "💥 Breaking Changes"
+    exclusive: true
     semver-increment: "major"
     when:
       labels:
         - "breaking"
   - title: "🚀 Features"
+    exclusive: true
     semver-increment: "minor"
     when:
       labels:
         - "feature"
         - "enhancement"
   - title: "🐛 Bug Fixes"
+    exclusive: true
     # semver-increment defaults to "patch"
     when:
       labels:
         - "fix"
         - "bug"
   - title: "⬆️ Dependencies"
+    exclusive: true
     when:
       labels:
         - "dependencies"
   - title: "📚 Documentation"
+    exclusive: true
     when:
       labels:
         - "documentation"
   - title: "🔧 Maintenance"
+    exclusive: true
     when:
       labels:
         - "chore"
@@ -77,6 +89,7 @@ autolabeler:
     branch:
       - '/^renovate\/.+/'
       - '/^dependabot\/.+/'
+      - '/^dependencies\/.+/'
     title:
       - '/^\w+\(deps(-dev)?\):/i'
       - '/update .+ (dependency|to v?\d)/i'
