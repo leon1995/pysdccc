@@ -21,7 +21,18 @@ jobs:
       contents: write        # create/update the draft release
       pull-requests: write   # apply labels via the autolabeler
     steps:
-      - uses: release-drafter/release-drafter@v7
+      # The root action only drafts the release; in v7 the autolabeler is a
+      # separate sub-action, so we run each on its own event.
+      - name: Update the draft release
+        if: github.event_name == 'push'
+        uses: release-drafter/release-drafter@v7
+        with:
+          config-name: release-drafter.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Autolabel the pull request
+        if: github.event_name == 'pull_request_target'
+        uses: release-drafter/release-drafter/autolabeler@v7
         with:
           config-name: release-drafter.yml
         env:
